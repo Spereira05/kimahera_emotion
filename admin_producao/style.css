@@ -1,0 +1,789 @@
+*
+{
+    font-family: Arial;
+}
+
+html, body
+{
+    height: 100%;
+    width: 100%;
+    min-height: 100%;
+}
+
+/* Fundos e Cores */
+.bg_beje {background-color: #feefdc;}
+.bg_vermelho {background-color: #a92b4d;}
+.bg_azul {background-color: #2c254b;}
+
+/* Força cor de fundo nos cabeçalhos das tabelas */
+thead.bg_azul th {
+    background-color: #2c254b !important;
+    color: #feefdc !important;
+}
+
+.beje {color: #feefdc;}
+.vermelho {color: #a92b4d;}
+.azul {color: #2c254b;}
+/* Fundos e Cores */
+
+.container
+{
+    height: 100%;
+    width: 100%;
+    min-height: 100%;
+}
+
+body
+{
+    /*background-color: #feefdc;*/
+}
+
+.container
+{
+    position: relative;
+    background-color: #fff;
+    height: 100% !important;
+    min-height: 100% !important;
+}
+
+/* Tabela Horário */
+table.horario
+{
+    width: 100%;
+    border-width: 5px;
+}
+
+table.horario, table.horario td
+{
+    border: 3px solid #2c254b;
+}
+
+table.horario td
+{
+    width: 100px;
+    height: 50px;
+    font-size: 0.8em;
+}
+
+table.horario thead tr.h2 td:not(:last-child)
+{
+    border-right-width: 5px;
+}
+
+table.horario tr td:not(:last-child):nth-child(2n)
+{
+    border-right-width: 5px;
+}
+
+table.horario tbody td
+{
+    height: 80px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    line-height: 17px;
+    vertical-align: bottom;
+}
+
+table.horario thead .blue td:not(:last-child)
+{
+    border-right-color: #ffefdc;
+}
+/* /Tabela Horário */
+
+.blue
+{
+    background-color: #2c254b;
+    color: #ffefdc;
+}
+
+.agora
+{
+    background-color: #a92b4d;
+    color: #ffefdc;
+}
+
+.titulo
+{
+    color: #2c254b;
+}
+
+.link:hover, .ativo
+{
+    cursor: pointer;
+    background-color: #a92b4d;
+    color: #feefdc;
+}
+
+.foto
+{
+    height: 250px;
+    
+}
+
+.foto-aluno
+{
+    height: 50px;
+}
+
+.foto-evento {
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #ddd;
+}
+
+/* Evento */
+.table img.foto {
+    height: 50px !important;
+    width: auto !important;
+}
+/* /Evento */
+
+.image-list-small
+{
+    margin: auto;
+    
+}
+
+.image-list-small a
+{
+    opacity: 1;
+    background: #a92b4d;
+}
+
+.image-list-small a.ativo
+{
+    opacity: 1;
+    background-color: #2c254b;
+}
+
+.image-list-small a:hover
+{
+    opacity: 1;
+}
+  
+.image-list-small li
+{
+    width: 166px;
+    height: 250px;
+    display: inline-block;
+    margin: 0 12px 60px;
+}
+  
+.image-list-small li > a
+{
+    display: block;
+    height: 250px;
+}
+  
+.image-list-small .details
+{
+    display: block;
+    font-size: 0.75em;
+    text-indent: 5px;
+    line-height: 25px;
+    background-color: #feefdc;
+}
+
+.check
+{
+    background-color: #2c254b !important;
+    color: #feefdc;
+}
+
+table.alunos tr
+{
+    line-height: 50px;
+}
+
+table.alunos img
+{
+    width: auto;
+    height: 50px;
+}
+
+#presencas .foto
+{
+    height: 50px;
+}
+
+.align-items-center
+{
+    display: flex; 
+    align-items: center;  /* Aligns vertically center */
+}
+
+/* Aula */
+.progress
+{
+    width: 130px !important;
+}
+/* /Aula */
+
+/* Aluno */
+#aluno img.foto
+{
+    width: 100%;
+    height: auto;
+}
+
+#aluno td.link span.small:nth-child(odd) /* Esconder alunos turma */
+{
+    display: none;
+}
+/* /Aluno */
+
+/* Professor */
+#professor img.foto
+{
+    width: 100%;
+    height: auto;
+}
+/* /Professor */
+
+.dot
+{
+    height: 8px;
+    width: 8px;
+    background-color: #000;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+#dashboard .list-group-item div:first-child
+{
+    width: 210px;
+}
+
+/* Presence Buttons */
+.presence-buttons {
+    display: flex;
+    gap: 2px;
+}
+
+.presence-buttons .btn {
+    min-width: 40px;
+    font-weight: bold;
+    border-width: 2px;
+    transition: all 0.2s ease;
+}
+
+.presence-buttons .btn:hover {
+    transform: scale(1.05);
+}
+
+.presence-buttons .btn:disabled {
+    transform: none;
+    opacity: 0.8;
+}
+
+.presence-buttons .btn i {
+    font-size: 0.8em;
+}
+
+/* Active states for better visual feedback */
+.presence-buttons .btn-success {
+    background-color: #198754;
+    border-color: #198754;
+    color: white;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+.presence-buttons .btn-outline-success {
+    color: #198754;
+    border-color: #198754;
+    background-color: transparent;
+}
+
+.presence-buttons .btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.presence-buttons .btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+    background-color: transparent;
+}
+
+/* Table row animations for feedback */
+.table-success {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+    transition: background-color 0.3s ease;
+}
+
+.table-danger {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    transition: background-color 0.3s ease;
+}
+/* /Presence Buttons */
+
+/* Aula Statistics Section */
+.aula-stats {
+    transition: all 0.3s ease;
+}
+
+.aula-stats .stat-item {
+    margin-bottom: 8px;
+}
+
+.aula-stats .stat-item.updating {
+    opacity: 0.6;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 2px 8px;
+}
+
+
+
+.aula-stats-container {
+    position: relative;
+}
+
+.aula-stats-loading {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #666;
+}
+
+/* Aula Statistics Animations */
+.aula-stats {
+    transition: all 0.3s ease;
+}
+
+.aula-stats.updating {
+    opacity: 0.7;
+}
+
+.aula-stats.stats-updated {
+    /* Removed green background box - only keep subtle feedback */
+    transition: all 0.3s ease;
+}
+
+.aula-stats-loading {
+    position: absolute;
+    top: 50%;
+    right: 50%;
+    transform: translate(50%, -50%);
+    color: #007bff;
+    font-size: 1.2em;
+}
+
+.aula-stats-container {
+    position: relative;
+}
+
+.stat-value {
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+
+
+
+
+#debug-buttons {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#debug-buttons button {
+    margin: 2px;
+    font-size: 0.8rem;
+}
+
+/* Highlight presence buttons when clicked */
+.presence-btn.clicked {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+}
+
+/* Loading state for stats */
+.aula-stats.loading {
+    opacity: 0.6;
+    position: relative;
+}
+
+.aula-stats.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+/* /Aula Statistics Animations */
+
+/* Enhanced Presence Animations */
+
+/* Button flash animation for success */
+@keyframes btn-flash {
+    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.8); }
+    50% { box-shadow: 0 0 0 8px rgba(40, 167, 69, 0.2); }
+    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+.btn-flash-success {
+    animation: btn-flash 0.8s ease-out;
+}
+
+/* Row pulse animation */
+@keyframes pulse-success {
+    0% { 
+        background-color: #d4edda; 
+        transform: scale(1);
+    }
+    50% { 
+        background-color: #c3e6cb; 
+        transform: scale(1.01);
+    }
+    100% { 
+        background-color: #d4edda; 
+        transform: scale(1);
+    }
+}
+
+.pulse-success {
+    animation: pulse-success 1.5s ease-in-out;
+}
+
+
+
+.stats-updating {
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+
+
+/* Smooth transitions for stat values */
+.stat-value {
+    transition: all 0.3s ease;
+}
+
+.assiduidade-bar {
+    transition: all 0.3s ease;
+}
+
+/* Enhanced table row animations */
+.table-success {
+    transition: all 0.3s ease !important;
+}
+
+.table-danger {
+    transition: all 0.3s ease !important;
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+}
+
+/* Button hover improvements */
+.presence-btn {
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.presence-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.presence-btn:active {
+    transform: translateY(0);
+}
+
+/* Improved loading state */
+.presence-btn:disabled {
+    position: relative;
+    overflow: hidden;
+}
+
+.presence-btn:disabled::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: loading-sweep 1.5s infinite;
+}
+
+@keyframes loading-sweep {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.aulas-hoje-foto-prof {
+    margin-top: 0;
+    object-fit: cover;
+    object-position: center 20%; /* Ajuste para descer a imagem dentro do círculo */
+}
+
+/* Alunos */
+.btn-primary {
+    background-color: #2c254b;
+    border-color: #2c254b;
+    color: #feefdc;
+}
+
+.btn-primary:hover {
+    background-color: #a92b4d;
+    border-color: #a92b4d;
+    color: #feefdc;
+}
+
+.btn-primary:focus,
+.btn-primary.focus {
+    background-color: #a92b4d;
+    border-color: #a92b4d;
+    box-shadow: 0 0 0 0.2rem rgba(44, 37, 75, 0.5);
+}
+
+.btn-primary:not(:disabled):not(.disabled):active,
+.btn-primary:not(:disabled):not(.disabled).active {
+    background-color: #a92b4d;
+    border-color: #a92b4d;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+}
+/* /Alunos */
+
+/* Event Image Styles */
+.evento-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #2c254b;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.evento-image-placeholder {
+    width: 100%;
+    height: 200px;
+    background-color: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+}
+
+.evento-image-placeholder:hover {
+    background-color: #e9ecef;
+    border-color: #2c254b;
+    transition: all 0.3s ease;
+}
+
+.evento-image-upload {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.evento-image-upload input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.evento-image-upload:hover .evento-image-placeholder {
+    background-color: #e9ecef;
+    border-color: #2c254b;
+    transition: all 0.3s ease;
+}
+
+.evento-image-upload:hover .evento-image {
+    filter: brightness(0.8);
+    transition: all 0.3s ease;
+}
+
+.evento-image-upload .btn {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.evento-image-upload:hover .btn {
+    opacity: 1;
+}
+/* /Event Image Styles */
+
+
+/* Radio Buttons Personalizado para Presenças */
+.btn-group {
+    display: flex;
+    gap: 0;
+}
+
+.btn-check {
+    position: absolute;
+    clip: rect(0, 0, 0, 0);
+    pointer-events: none;
+}
+
+.btn-check[disabled] + .btn,
+.btn-check:disabled + .btn {
+    pointer-events: none;
+    filter: none;
+    opacity: 0.65;
+}
+
+/* Estilo dos botões de presença */
+.btn-outline-success {
+    color: #198754;
+    border-color: #198754;
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-outline-success:hover {
+    color: #fff;
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.btn-check:checked + .btn-outline-success {
+    color: #fff;
+    background-color: #198754;
+    border-color: #198754;
+    box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+}
+
+.btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-outline-danger:hover {
+    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-check:checked + .btn-outline-danger {
+    color: #fff;
+    background-color: #dc3545;
+    border-color: #dc3545;
+    box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+}
+
+/* Tamanho dos botões */
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+}
+
+/* Grupo de botões - remover espaço entre eles */
+.btn-group > .btn:not(:first-child) {
+    margin-left: -1px;
+}
+
+.btn-group > .btn:not(:last-child) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.btn-group > .btn:not(:first-child) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* Responsivo - em telas pequenas */
+@media (max-width: 768px) {
+    .btn-sm {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.8rem;
+    }
+
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-group > .btn {
+        width: 100%;
+        margin-left: 0;
+        margin-top: -1px;
+    }
+
+    .btn-group > .btn:not(:first-child) {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+        border-bottom-left-radius: 0.375rem;
+        border-bottom-right-radius: 0.375rem;
+    }
+
+    .btn-group > .btn:not(:last-child) {
+        border-top-left-radius: 0.375rem;
+        border-top-right-radius: 0.375rem;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+}
+
+/* Animação suave para mudança de estado */
+.btn {
+    transition: all 0.15s ease-in-out;
+}
+
+/* Focus nos botões */
+.btn:focus {
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Custom destaque button styles */
+.btn-destaque-off {
+    background-color: #2c254b;
+    border-color: #2c254b;
+    color: #feefdc;
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-destaque-off:hover {
+    background-color: #1a1834;
+    border-color: #1a1834;
+    color: #feefdc;
+}
+
+.btn-destaque-on {
+    background-color: #a92b4d;
+    border-color: #a92b4d;
+    color: #feefdc;
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-destaque-on:hover {
+    background-color: #8e243f;
+    border-color: #8e243f;
+    color: #feefdc;
+}
