@@ -144,3 +144,6 @@ admin_old/
 .htaccess.dev
 
 admin_santiago
+analytics.php
+health-check.php
+system-status.php
