@@ -952,10 +952,52 @@ table.alunos img {
     animation: fadeInDown 0.2s ease-out;
 }
 
+/* Autocomplete results (used by controller's alunos method) */
+.autocomplete-results {
+    border-radius: 0 0 0.375rem 0.375rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    border: 1px solid #dee2e6;
+    border-top: none;
+}
+
+.autocomplete-results .autocomplete-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e9ecef;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.autocomplete-results .autocomplete-item:hover {
+    background-color: #feefdc;
+}
+
+.autocomplete-results .autocomplete-item.bg-light {
+    background-color: #feefdc;
+}
+
+/* Clear search button styling */
+#clear-search-btn {
+    background-color: white !important;
+    border-color: #a92b4d !important;
+    color: #a92b4d !important;
+}
+
+#clear-search-btn:hover {
+    background-color: #8b2240 !important;
+    border-color: #8b2240 !important;
+    color: white !important;
+}
+
+#clear-search-btn:focus {
+    background-color: #8b2240 !important;
+    border-color: #8b2240 !important;
+    color: white !important;
+    box-shadow: 0 0 0 0.2rem rgba(169, 43, 77, 0.25) !important;
+}
+
 /* Selected student display improvements */
 .selected-student-info .card {
     border: 2px solid #a92b4d;
-    background: linear-gradient(135deg, #feefdc 0%, #f5e6d3 100%);
 }
 
 /* Search tips styling */
