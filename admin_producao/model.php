@@ -2,13 +2,13 @@
 
 class EmotionModel
 {
-    private $db_host = 'localhost';
-    private $db_user = 'root';
-    private $db_password = '';
-    private $db_name = 'admin_emotiondanceacademy';
-    private $db_charset = 'utf8';
+    private $db_host = "localhost";
+    private $db_user = "root";
+    private $db_password = "";
+    private $db_name = "admin_emotiondanceacademy";
+    private $db_charset = "utf8";
     public $mysqli;
-  
+
     public function __construct()
     {
         $this->db_connect();
@@ -16,23 +16,29 @@ class EmotionModel
 
     private function db_connect()
     {
-        $this->mysqli = new mysqli($this->db_host, $this->db_user, $this->db_password, $this->db_name);
+        $this->mysqli = new mysqli(
+            $this->db_host,
+            $this->db_user,
+            $this->db_password,
+            $this->db_name,
+        );
         $this->mysqli->set_charset($this->db_charset);
-        
+
         // Ensure autocommit is enabled for immediate visibility of changes
         $this->mysqli->autocommit(true);
-        
+
         // Set isolation level to READ COMMITTED for immediate visibility across connections
-        $this->mysqli->query("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED");
-        
+        $this->mysqli->query(
+            "SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED",
+        );
+
         return $this->mysqli;
     }
 
     function horarios($id_horarios)
-    {   
+    {
         $id_horarios = "3";
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `horarios`.*
             FROM `horarios`
             WHERE `horarios`.`id` = {$id_horarios}
@@ -43,8 +49,7 @@ class EmotionModel
 
     function aluno($id_alunos)
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `alunos`.*
             FROM `alunos`
             WHERE `alunos`.`id` = {$id_alunos}
@@ -55,7 +60,7 @@ class EmotionModel
 
     function dataAssiduidade()
     {
-        $data = date('Y-m-d', strtotime('-295 day', strtotime(date('Y-m-d'))));
+        $data = date("Y-m-d", strtotime("-295 day", strtotime(date("Y-m-d"))));
         // if ($_GET['generate'] == 1) {$data = '2024-09-09';}
 
         return $data;
@@ -109,8 +114,7 @@ class EmotionModel
 
     function professores()
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `professores`.*
             FROM `professores`
             WHERE `professores`.`ativo` = 1
@@ -122,8 +126,7 @@ class EmotionModel
 
     function modalidadesProfessor($id_professores, $id_horarios)
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `modalidades`.`id`, `modalidades`.`nome`
             FROM `aulas_professores`
             LEFT JOIN `aulas` ON `aulas`.`id` = `aulas_professores`.`id_aulas`
@@ -140,17 +143,14 @@ class EmotionModel
 
     function aulas($id_horarios, $dia, $id_professores)
     {
-        $profs = '';
-        if(isset($id_professores))
-        {
-            if($id_professores)
-            {
+        $profs = "";
+        if (isset($id_professores)) {
+            if ($id_professores) {
                 $profs = " AND `professores`.`id` = {$id_professores} ";
             }
         }
 
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `aulas`.*, `modalidades`.`nome` AS `modalidade`, `modalidades`.`abreviatura`, `professores`.`nome` AS `professor`, `professores`.`alcunha`, `professores`.`valor`
             FROM `aulas`
             LEFT JOIN `modalidades` ON `modalidades`.`id` = `aulas`.`id_modalidades`
@@ -160,42 +160,40 @@ class EmotionModel
             AND `aulas`.`ativo` = 1
             {$profs}
             ORDER BY `aulas`.`inicio`, `aulas`.`estudio`
-        ");    
+        ");
 
         return $result;
     }
 
-    function aulasProfessores($id, $id_professores, $id_modalidades, $data_inicio, $data_fim)
-    {
-        $profs = '';
-        if(isset($id_professores))
-        {
-            if($id_professores)
-            {
+    function aulasProfessores(
+        $id,
+        $id_professores,
+        $id_modalidades,
+        $data_inicio,
+        $data_fim,
+    ) {
+        $profs = "";
+        if (isset($id_professores)) {
+            if ($id_professores) {
                 $profs = " AND `professores`.`id` = {$id_professores} ";
             }
         }
 
-        $modalidades = '';
-        if(isset($id_modalidades))
-        {
-            if($id_modalidades)
-            {
+        $modalidades = "";
+        if (isset($id_modalidades)) {
+            if ($id_modalidades) {
                 $profs = " AND `modalidades`.`id` = {$id_modalidades} ";
             }
         }
 
-        $aula = '';
-        if(isset($id))
-        {
-            if($id)
-            {
+        $aula = "";
+        if (isset($id)) {
+            if ($id) {
                 $aula = " AND `aulas_professores`.`id` = {$id} ";
             }
         }
 
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `aulas`.`id` AS `id_aulas`,
             `aulas_professores`.`id`,
             `aulas_professores`.`data`,
@@ -239,11 +237,12 @@ class EmotionModel
     function alunosTurma($id_aulas, $dia)
     {
         $data = $this->dataAssiduidade();
-        if($dia){$dia = "AND `alunos_aulas`.`dia` = '{$dia}'";}
+        if ($dia) {
+            $dia = "AND `alunos_aulas`.`dia` = '{$dia}'";
+        }
 
-        $result = $this->mysqli->query
-        ("
-            SELECT `alunos_aulas`.*, `alunos`.`nome`, `alunos`.`alcunha`, `alunos`.`data_inscricao`, `alunos`.`data_nascimento`, `aulas`.`id_professores`, 
+        $result = $this->mysqli->query("
+            SELECT `alunos_aulas`.*, `alunos`.`nome`, `alunos`.`alcunha`, `alunos`.`data_inscricao`, `alunos`.`data_nascimento`, `aulas`.`id_professores`,
             ROUND((
                 (
                     SELECT COUNT(`presencas`.`id`)
@@ -253,7 +252,7 @@ class EmotionModel
                     AND `presencas`.`presente` = 1
                     AND `presencas`.`id_alunos` = `alunos`.`id`
                     AND `presencas`.`id_aulas` = {$id_aulas}
-                ) * 100 / 
+                ) * 100 /
                 (
                     SELECT COUNT(`presencas`.`id`)
                     FROM `presencas`
@@ -277,8 +276,7 @@ class EmotionModel
 
     function alunosAulas($id_alunos, $id_aulas, $dia, $e)
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `alunos_aulas`.*, `aulas`.`estudio`
             FROM `alunos_aulas`
             LEFT JOIN `aulas` ON `aulas`.`id` = `alunos_aulas`.`id_aulas`
@@ -295,8 +293,7 @@ class EmotionModel
 
     function mensalidade($id_alunos, $id_horarios)
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `alunos_aulas`.*, `aulas`.`id_modalidades`
             FROM `alunos_aulas`
             LEFT JOIN `aulas` ON `aulas`.`id` = `alunos_aulas`.`id_aulas`
@@ -310,8 +307,7 @@ class EmotionModel
 
     function mensalidadeCrew($id_alunos)
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `alunos_aulas`.*, `aulas`.`id_modalidades`
             FROM `alunos_aulas`
             LEFT JOIN `aulas` ON `aulas`.`id` = `alunos_aulas`.`id_aulas`
@@ -324,8 +320,7 @@ class EmotionModel
 
     function createAlunoAula($id_alunos, $id_aulas, $dia)
     {
-        $this->mysqli->query
-        ("
+        $this->mysqli->query("
             INSERT INTO `alunos_aulas` (`id_alunos`, `id_aulas`, `dia`)
             VALUES ({$id_alunos}, {$id_aulas}, '{$dia}')
         ");
@@ -333,8 +328,7 @@ class EmotionModel
 
     function removeAlunoAula($id_alunos, $id_aulas, $dia)
     {
-        $this->mysqli->query
-        ("
+        $this->mysqli->query("
             DELETE FROM `alunos_aulas`
             WHERE `id_alunos` = {$id_alunos}
             AND `id_aulas` = {$id_aulas}
@@ -344,22 +338,16 @@ class EmotionModel
 
     function createPresenca($id_alunos, $id_aulas, $dia, $presente, $data)
     {
-        if(!$presente)
-        {
-            if($dt >= $hoje)
-            {
-                $this->mysqli->query
-                ("
+        if (!$presente) {
+            if ($dt >= $hoje) {
+                $this->mysqli->query("
                     INSERT INTO `presencas` (`id_alunos`, `id_aulas`, `dia`, `presente`, `data`)
                     VALUES ({$id_alunos}, {$id_aulas}, '{$dia}', {$presente}, '{$data}')
                 ");
             }
-        }
-        else
-        {
-            $dt = date('Y-m-d', strtotime($data));
-            $this->mysqli->query
-            ("
+        } else {
+            $dt = date("Y-m-d", strtotime($data));
+            $this->mysqli->query("
                 UPDATE `presencas` SET `data` = '{$data}', `dia` = '{$dia}', `presente` = 1
                 WHERE `id_alunos` = {$id_alunos}
                 AND `id_aulas` = {$id_aulas}
@@ -370,9 +358,8 @@ class EmotionModel
 
     function removePresenca($id_alunos, $id_aulas, $dia, $data)
     {
-        $data = date('Y-m-d', strtotime($data));
-        $this->mysqli->query
-        ("
+        $data = date("Y-m-d", strtotime($data));
+        $this->mysqli->query("
             UPDATE `presencas` SET `presente` = 0
             WHERE `id_alunos` = {$id_alunos}
             AND `id_aulas` = {$id_aulas}
@@ -393,17 +380,15 @@ class EmotionModel
 
     function aulaData($id_aulas, $data)
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `aulas_professores`.*
             FROM `aulas_professores`
             WHERE `aulas_professores`.`id_aulas` = {$id_aulas}
             AND `aulas_professores`.`data` = '{$data}'
         ");
         $row = $result->fetch_array();
-        if($row['id'])
-        {
-            return $row['id'];
+        if ($row["id"]) {
+            return $row["id"];
         }
 
         return false;
@@ -411,8 +396,7 @@ class EmotionModel
 
     function presencaAluno($id_aulas, $id_alunos, $data)
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `presencas`.*
             FROM `presencas`
             WHERE `presencas`.`id_alunos` = {$id_alunos}
@@ -420,9 +404,8 @@ class EmotionModel
             AND `presencas`.`data` LIKE '{$data}%'
         ");
 
-        if(!$result->num_rows && $this->aulaData($id_aulas, $data))
-        {
-            $this->createPresenca($id_alunos, $id_aulas, '', 0, $data);
+        if (!$result->num_rows && $this->aulaData($id_aulas, $data)) {
+            $this->createPresenca($id_alunos, $id_aulas, "", 0, $data);
         }
 
         return $result;
@@ -432,8 +415,7 @@ class EmotionModel
     {
         $data_inicio = $this->dataAssiduidade();
 
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `presencas`.`id` AS `id_presencas`, `presencas`.`presente`, `presencas`.`observacoes`, `alunos`.*,
             ROUND((
                 (
@@ -444,7 +426,7 @@ class EmotionModel
                     AND `presencas`.`presente` = 1
                     AND `presencas`.`id_alunos` = `alunos`.`id`
                     AND `presencas`.`id_aulas` = {$id_aulas}
-                ) * 100 / 
+                ) * 100 /
                 (
                     SELECT COUNT(`presencas`.`id`)
                     FROM `presencas`
@@ -460,14 +442,13 @@ class EmotionModel
             AND `presencas`.`data` LIKE '{$data}%'
             ORDER BY `presencas`.`presente` DESC, `alunos`.`nome`
         ");
-        
+
         return $result;
     }
 
     function interrupcao($data)
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT COUNT(`interrupcoes`.`id`)
             FROM `interrupcoes`
             WHERE '{$data}' BETWEEN `interrupcoes`.`data_inicio` AND `interrupcoes`.`data_fim`
@@ -478,8 +459,7 @@ class EmotionModel
 
     function pedagogia()
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `pedagogia`.*, `modalidades`.`nome` AS `modalidade`, `professores`.`nome` AS `professor`
             FROM `pedagogia`
             LEFT JOIN `modalidades` ON `modalidades`.`id` = `pedagogia`.`id_modalidades`
@@ -491,8 +471,7 @@ class EmotionModel
 
     function alunosPedagogia($id_pedagogia)
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `alunos_pedagogia`.*, `alunos`.`nome` AS `aluno`
             FROM `alunos_pedagogia`
             LEFT JOIN `alunos` ON `alunos`.`id` = `alunos_pedagogia`.`id_alunos`
@@ -502,10 +481,16 @@ class EmotionModel
         return $result;
     }
 
-    function aulaProfessor($id_professores, $id_aulas, $dia, $data, $inicio, $fim, $valor)
-    {
-        $this->mysqli->query
-        ("
+    function aulaProfessor(
+        $id_professores,
+        $id_aulas,
+        $dia,
+        $data,
+        $inicio,
+        $fim,
+        $valor,
+    ) {
+        $this->mysqli->query("
             INSERT INTO `aulas_professores` (`id_professores`, `id_aulas`, `dia`, `data`, `inicio`, `fim`, `valor`)
             VALUES ({$id_professores}, {$id_aulas}, '{$dia}', '{$data}', '{$inicio}', '{$fim}', '{$valor}')
         ");
@@ -514,15 +499,14 @@ class EmotionModel
     function aula($id, $data)
     {
         // Validate and sanitize parameters
-        $id = (int)$id;
+        $id = (int) $id;
         $data = $this->mysqli->real_escape_string($data);
-        
+
         if ($id <= 0) {
             return false;
         }
-        
-        $result = $this->mysqli->query
-        ("
+
+        $result = $this->mysqli->query("
             SELECT `aulas_professores`.*, `modalidades`.`nome` AS `modalidade`, `modalidades`.`abreviatura`, `professores`.`nome` AS `professor`, `professores`.`data_nascimento`, `professores`.`telemovel`
             FROM `aulas_professores`
             LEFT JOIN `aulas` ON `aulas`.`id` = `aulas_professores`.`id_aulas`
@@ -537,8 +521,7 @@ class EmotionModel
 
     function presencasObservacoes($id_presencas, $observacoes)
     {
-        $this->mysqli->query
-        ("
+        $this->mysqli->query("
             UPDATE `presencas` SET `observacoes` = \"{$observacoes}\"
             WHERE `id` = {$id_presencas}
         ");
@@ -547,34 +530,37 @@ class EmotionModel
     function presencasPresente($id_presencas, $presente)
     {
         // Use prepared statement for safety
-        $stmt = $this->mysqli->prepare("UPDATE `presencas` SET `presente` = ? WHERE `id` = ?");
+        $stmt = $this->mysqli->prepare(
+            "UPDATE `presencas` SET `presente` = ? WHERE `id` = ?",
+        );
         if (!$stmt) {
             error_log("Prepare failed: " . $this->mysqli->error);
             return false;
         }
-        
+
         $stmt->bind_param("ii", $presente, $id_presencas);
         $result = $stmt->execute();
-        
+
         if (!$result) {
             error_log("Execute failed: " . $stmt->error);
             return false;
         }
-        
+
         $affected_rows = $this->mysqli->affected_rows;
         $stmt->close();
-        
+
         // Log for debugging
-        error_log("presencasPresente: id={$id_presencas}, presente={$presente}, affected_rows={$affected_rows}");
-        
+        error_log(
+            "presencasPresente: id={$id_presencas}, presente={$presente}, affected_rows={$affected_rows}",
+        );
+
         // Return true if the update was successful
         return $result && $affected_rows > 0;
     }
 
     function apagaPresenca($id_presencas)
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             DELETE FROM `presencas`
             WHERE `id` = {$id_presencas}
         ");
@@ -607,8 +593,7 @@ class EmotionModel
     {
         $data = $this->dataAssiduidade();
 
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `modalidades`.`nome`, `modalidades`.`abreviatura`, SUM(`presencas`.`presente`) AS `presentes`, `aulas_professores`.`id_professores`, (COUNT(`presencas`.`id`) - SUM(`presencas`.`presente`)) AS `ausentes`, COUNT(`presencas`.`id`) AS `total`, ROUND((SUM(`presencas`.`presente`) * 100 / COUNT(`presencas`.`id`)), 0) AS `assiduidade`
             FROM `presencas`
             LEFT JOIN `aulas` ON `aulas`.`id` = `presencas`.`id_aulas`
@@ -624,8 +609,7 @@ class EmotionModel
 
     function alunosLocalidades()
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `localidade`, COUNT(`id`) AS `alunos`
             FROM `alunos`
             WHERE `ativo` = 1
@@ -639,31 +623,24 @@ class EmotionModel
 
     function clientes($clientes)
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `alunos`.*
             FROM `alunos`
             WHERE !`alunos`.`id_customers`
             AND `alunos`.`ativo` = 1
         ");
-        while($row = $result->fetch_array())
-        {
+        while ($row = $result->fetch_array()) {
             extract($row);
 
-            if($clientes[$nif])
-            {
-                $this->mysqli->query
-                ("
-                    UPDATE `alunos` SET `id_customers` = {$clientes[$nif]['id']} 
+            if ($clientes[$nif]) {
+                $this->mysqli->query("
+                    UPDATE `alunos` SET `id_customers` = {$clientes[$nif]["id"]}
                     WHERE `nif` = '{$nif}'
                 ");
-            }
-            else
-            {
-                $this->mysqli->query
-                ("
-                    UPDATE `alunos` SET `id_customers` = {$clientes[$nome]['id']} 
-                    WHERE `nome` = \"{$clientes[$nome]['nome']}\"
+            } else {
+                $this->mysqli->query("
+                    UPDATE `alunos` SET `id_customers` = {$clientes[$nome]["id"]}
+                    WHERE `nome` = \"{$clientes[$nome]["nome"]}\"
                 ");
             }
         }
@@ -673,7 +650,7 @@ class EmotionModel
         {
             $this->mysqli->query
             ("
-                UPDATE `alunos` SET `id_customers` = {$cliente['id']} 
+                UPDATE `alunos` SET `id_customers` = {$cliente['id']}
                 WHERE `nif` = '{$nif}'
             ");
         */
@@ -683,9 +660,8 @@ class EmotionModel
     {
         $data = $this->dataAssiduidade();
 
-        $result = $this->mysqli->query
-        ("
-            SELECT 
+        $result = $this->mysqli->query("
+            SELECT
                 SUM(`presencas`.`presente`) AS `presentes`,
                 (COUNT(`presencas`.`id`) - SUM(`presencas`.`presente`)) AS `ausentes`,
                 COUNT(`presencas`.`id`) AS `total`
@@ -703,9 +679,8 @@ class EmotionModel
     {
         $data = $this->dataAssiduidade();
 
-        $result = $this->mysqli->query
-        ("
-            SELECT 
+        $result = $this->mysqli->query("
+            SELECT
                 `modalidades`.`nome`,
                 SUM(`presencas`.`presente`) AS `presentes`,
                 (COUNT(`presencas`.`id`) - SUM(`presencas`.`presente`)) AS `ausentes`,
@@ -726,8 +701,7 @@ class EmotionModel
 
     function eventos()
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `eventos`.*, `categorias`.`nome` AS `categoria`,
             (SELECT COUNT(`professores_eventos`.`id`) FROM `professores_eventos` WHERE `professores_eventos`.`id_eventos` = `eventos`.`id`) AS `professores`,
             (SELECT COUNT(`alunos_eventos`.`id`) FROM `alunos_eventos` WHERE `alunos_eventos`.`id_eventos` = `eventos`.`id`) AS `alunos`
@@ -739,7 +713,7 @@ class EmotionModel
 
         return $result;
     }
-    
+
     function evento($id_eventos)
     {
         $result = $this->mysqli->query("
@@ -750,7 +724,7 @@ class EmotionModel
         ");
         return $result;
     }
-    
+
     function alunosEvento($id_eventos)
     {
         $result = $this->mysqli->query("
@@ -762,7 +736,7 @@ class EmotionModel
         ");
         return $result;
     }
-    
+
     function presencaEventoAluno($id_eventos, $id_alunos)
     {
         $result = $this->mysqli->query("
@@ -801,24 +775,82 @@ class EmotionModel
 
     function removePresencaEvento($id_alunos, $id_eventos)
     {
+        // First check if record exists
+        $check_result = $this->mysqli->query("
+            SELECT id FROM `alunos_eventos`
+            WHERE `id_alunos` = '{$id_alunos}' AND `id_eventos` = '{$id_eventos}'
+        ");
+
+        if ($check_result->num_rows == 0) {
+            // Record doesn't exist, so it's already "absent" - return true
+            return true;
+        }
+
         $this->mysqli->query("
             DELETE FROM `alunos_eventos`
             WHERE `id_alunos` = '{$id_alunos}' AND `id_eventos` = '{$id_eventos}'
         ");
+
+        // Check for MySQL errors
+        if ($this->mysqli->error) {
+            error_log(
+                "MySQL Error in removePresencaEvento: " . $this->mysqli->error,
+            );
+            return false;
+        }
+
         return $this->mysqli->affected_rows > 0;
     }
 
-
     function professor($id_professores)
     {
-        $result = $this->mysqli->query
-        ("
+        $result = $this->mysqli->query("
             SELECT `professores`.*
             FROM `professores`
             WHERE `professores`.`id` = {$id_professores}
         ");
 
         return $result;
+    }
+
+    function professoresEvento($id_eventos)
+    {
+        $result = $this->mysqli->query("
+            SELECT p.*, pe.id as id_professor_evento
+            FROM professores p
+            LEFT JOIN professores_eventos pe ON pe.id_professores = p.id AND pe.id_eventos = '{$id_eventos}'
+            WHERE p.ativo = 1
+            ORDER BY p.nome ASC
+        ");
+        return $result;
+    }
+
+    function createProfessorEvento($id_professores, $id_eventos)
+    {
+        // Check if already exists
+        $check = $this->mysqli->query("
+            SELECT id FROM professores_eventos
+            WHERE id_professores = '{$id_professores}' AND id_eventos = '{$id_eventos}'
+        ");
+
+        if ($check->num_rows > 0) {
+            return true; // Already exists
+        }
+
+        $this->mysqli->query("
+            INSERT INTO professores_eventos (id_professores, id_eventos)
+            VALUES ('{$id_professores}', '{$id_eventos}')
+        ");
+        return $this->mysqli->affected_rows > 0;
+    }
+
+    function removeProfessorEvento($id_professores, $id_eventos)
+    {
+        $this->mysqli->query("
+            DELETE FROM professores_eventos
+            WHERE id_professores = '{$id_professores}' AND id_eventos = '{$id_eventos}'
+        ");
+        return $this->mysqli->affected_rows > 0;
     }
 }
 

@@ -1,0 +1,146 @@
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.buildpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# PHP Files
+*.log
+*.cache
+.env
+.env.local
+.env.production
+.env.staging
+
+# Composer
+/vendor/
+composer.phar
+composer.lock
+
+# Configuration Files
+config.php
+database.php
+*config*.local.php
+
+# Temporary Files
+tmp/
+temp/
+cache/
+logs/
+*.tmp
+
+# Upload Directories
+uploads/
+img/uploads/
+files/
+documents/
+
+# Backup Files
+*.backup
+*.bak
+*.old
+backup/
+backups/
+
+# Database
+*.sql
+*.sqlite
+*.db
+
+# Generated Files
+generated/
+build/
+dist/
+
+# Session Files
+sessions/
+tmp/sessions/
+
+# Error and Access Logs
+error.log
+access.log
+*.log
+
+# PHP Storm
+.phpstorm.meta.php
+
+# Node.js (if using any JS build tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Package managers
+package-lock.json
+yarn.lock
+
+# Local development
+.htaccess.local
+robots.txt.local
+
+# Security
+*.key
+*.pem
+*.p12
+*.crt
+*.cer
+*.der
+
+# Testing
+phpunit.xml
+.phpunit.result.cache
+tests/_output/
+codeception.yml
+
+# Framework specific
+storage/
+bootstrap/cache/
+
+# Project Specific Files
+# Keep config.php tracked but ignore sensitive configs
+config.local.php
+config.production.php
+
+# Image uploads (keep sample images but ignore user uploads)
+img/alunos/
+img/professores/
+img/eventos/uploads/
+
+# PDF generations
+certificados/generated/
+certificados/*.pdf
+
+# FPDF temporary files
+fpdf/temp/
+
+# Analytics and logs
+analytics/
+system-logs/
+
+# Test files
+test-*.php
+
+# Backup admin folders
+admin_backup/
+admin_old/
+
+# Local development overrides
+*.local.*
+.htaccess.dev
+
+admin_santiago

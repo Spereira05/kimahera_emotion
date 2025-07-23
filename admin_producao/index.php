@@ -1,17 +1,17 @@
 <?php
 
 // Redirect to new authentication system if not authenticated
-require_once('config.php');
-require_once('includes/functions.php');
+require_once "config.php";
+require_once "includes/functions.php";
 
-error_reporting(E_ALL);
-ini_set("display_errors", "On");
+// error_reporting(E_ALL);
+// ini_set("display_errors", "On");
 
 session_start();
 
 // Check if user is logged in with new system
 if (!isLoggedIn()) {
-    header('Location: login.php');
+    header("Location: login.php");
     exit();
 }
 
@@ -43,23 +43,20 @@ if(!in_array($userIP, $allowedIPs))
 #/IP Check
 */
 
-if(isset($_GET['p']))
-{
-    $_SESSION['p'] = $_GET['p'];
-}
-elseif(!isset($_SESSION['p']))
-{
-    $_SESSION['p'] = 'turmas'; #Default /#
+if (isset($_GET["p"])) {
+    $_SESSION["p"] = $_GET["p"];
+} elseif (!isset($_SESSION["p"])) {
+    $_SESSION["p"] = "turmas"; #Default /#
 }
 
-require("model.php");
-require("controller.php");
+require "model.php";
+require "controller.php";
 $emotionModel = new EmotionModel();
 $emotionController = new EmotionController();
 
 $rand = mt_rand();
-//$rand = 0;
 
+//$rand = 0;
 ?>
 <html class="h-100">
     <head>
@@ -94,18 +91,28 @@ $rand = mt_rand();
                                 <!-- Logo centralizado -->
                                 <div class="col-12 col-md-6 text-center">
                                     <div class="logo" style="margin-top: -10px;">
-                                        <img src="img/logo_emotion.svg" alt="Emotion Dance Academy" 
-                                             class="img-fluid" 
-                                             style="max-height: 60px;" 
+                                        <img src="img/logo_emotion.svg" alt="Emotion Dance Academy"
+                                             class="img-fluid"
+                                             style="max-height: 60px;"
                                              onerror="this.src='img/logo.png'">
                                     </div>
                                 </div>
                                 <!-- User info à direita -->
                                 <div class="col-12 col-md-3 text-center text-md-end mt-2 mt-md-0">
                                     <div class="user-info" style="margin-top: 40px;">
+                                        <!-- DEVELOPMENT ONLY - Comment out for production -->
+                                        <div class="mb-2">
+                                            <a href="system-status.php" class="btn btn-outline-info btn-sm" id="systemStatusBtn" title="Ver estado do sistema">
+                                                <i class="fas fa-heartbeat me-1"></i>
+                                                <span id="systemStatusIndicator" class="badge bg-secondary">-</span>
+                                            </a>
+                                        </div>
+                                        <!-- END DEVELOPMENT ONLY -->
                                         <span class="text-muted d-block d-md-inline me-md-2">
                                             <i class="fas fa-user me-1"></i>
-                                            <?php echo htmlspecialchars($_SESSION['usuario_nome']); ?>
+                                            <?php echo htmlspecialchars(
+                                                $_SESSION["usuario_nome"],
+                                            ); ?>
                                         </span>
                                         <a href="auth/logout.php" class="btn btn-outline-danger btn-sm mt-1 mt-md-0">
                                             <i class="fas fa-sign-out-alt me-1"></i>Sair
@@ -117,30 +124,94 @@ $rand = mt_rand();
                     </header>
                     <ul class="nav nav-pills mt-3 mb-3 bg_vermelho">
                     <?php
-
-                    $paginas = array('dashboard' => 'Dashboard', 'alunos' => 'Alunos', 'professores' => 'Professores', 'professor' => '', 'aluno' => '', 'horario' => 'Horário', 'turmas' => 'Presenças', 'aulas' => 'Aulas', 'eventos' => 'Eventos');
-                    foreach($paginas as $pagina => $titulo)
-                    {
+                    $paginas = [
+                        "dashboard" => "Dashboard",
+                        "alunos" => "Alunos",
+                        "professores" => "Professores",
+                        "professor" => "",
+                        "aluno" => "",
+                        "horario" => "Horário",
+                        "turmas" => "Presenças",
+                        "aulas" => "Aulas",
+                        "eventos" => "Eventos",
+                    ];
+                    foreach ($paginas as $pagina => $titulo) {
                         // Skip empty titles (hidden pages)
-                        if(empty($titulo)) continue;
-                        
+                        if (empty($titulo)) {
+                            continue;
+                        }
+
                         //$active = '';
-                        echo 
-                        "
+                        echo "
                             <li class='nav-item'>
                                 <a class='nav-link beje' href='?p={$pagina}'>{$titulo}</a>
                             </li>
                         ";
                     }
-
                     ?>
                     </ul>
                 </div>
             </div>
 
-            <?php include("{$_SESSION['p']}.php"); ?>
+            <?php include "{$_SESSION["p"]}.php"; ?>
             <div class='pb-5 w-100'></div>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+
+        <!-- DEVELOPMENT ONLY - Comment out for production -->
+        <script>
+        // System status indicator
+        $(document).ready(function() {
+            function updateSystemStatus() {
+                $.ajax({
+                    url: 'health-check.php',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        const indicator = $('#systemStatusIndicator');
+                        const btn = $('#systemStatusBtn');
+
+                        indicator.text(data.summary.failed > 0 ? '!' : '✓');
+
+                        // Update button style based on status
+                        btn.removeClass('btn-outline-info btn-outline-warning btn-outline-danger');
+                        indicator.removeClass('bg-secondary bg-success bg-warning bg-danger');
+
+                        if (data.status === 'healthy') {
+                            btn.addClass('btn-outline-success');
+                            indicator.addClass('bg-success');
+                            btn.attr('title', 'Sistema funcionando normalmente');
+                        } else if (data.status === 'degraded') {
+                            btn.addClass('btn-outline-warning');
+                            indicator.addClass('bg-warning');
+                            btn.attr('title', 'Sistema com avisos (' + data.summary.warnings + ')');
+                        } else {
+                            btn.addClass('btn-outline-danger');
+                            indicator.addClass('bg-danger');
+                            btn.attr('title', 'Sistema com problemas (' + data.summary.failed + ' falhas)');
+                        }
+                    },
+                    error: function() {
+                        const indicator = $('#systemStatusIndicator');
+                        const btn = $('#systemStatusBtn');
+
+                        indicator.text('?');
+                        btn.removeClass('btn-outline-info btn-outline-warning btn-outline-danger btn-outline-success');
+                        btn.addClass('btn-outline-secondary');
+                        indicator.removeClass('bg-secondary bg-success bg-warning bg-danger');
+                        indicator.addClass('bg-secondary');
+                        btn.attr('title', 'Não foi possível verificar o estado do sistema');
+                    }
+                });
+            }
+
+            // Initial check
+            updateSystemStatus();
+
+            // Check every 60 seconds
+            setInterval(updateSystemStatus, 60000);
+        });
+        </script>
+        <!-- END DEVELOPMENT ONLY -->
     </body>
 </html>

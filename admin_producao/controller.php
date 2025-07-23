@@ -344,24 +344,161 @@ class EmotionController
     {
         $result = $this->emotionModel->alunos($order, $limit);
 
-        $options = "<option>Alunos</option>";
+        $selected_student = "";
+        $student_data = [];
+
         while ($row = $result->fetch_array()) {
             extract($row);
-
-            $selected = "";
-            if ($id == $this->id_alunos) {
-                $selected = "selected";
-            }
-
             $idade = $this->idade($data_nascimento);
 
-            $options .= "<option value='{$id}' {$selected}>{$nome} ({$idade} anos) [{$id}]</option>";
+            $student_info = [
+                "id" => $id,
+                "nome" => $nome,
+                "idade" => $idade,
+                "display" => "{$nome} ({$idade} anos) [{$id}]",
+            ];
+
+            $student_data[] = $student_info;
+
+            if ($id == $this->id_alunos) {
+                $selected_student = $student_info["display"];
+            }
         }
 
+        $students_json = json_encode($student_data);
+
         return "
-            <form method='get' name='alunos'>
-                <select id='id_alunos' name='id_alunos' class='form-select'>{$options}</select>
+            <form method='get' name='alunos' class='mb-3'>
+                <div class='autocomplete-container position-relative'>
+                    <input type='text'
+                           id='student-search'
+                           class='form-control'
+                           placeholder='Pesquisar aluno por nome...'
+                           value='{$selected_student}'
+                           autocomplete='off'>
+                    <input type='hidden' id='id_alunos' name='id_alunos' value='{$this->id_alunos}'>
+                    <div id='autocomplete-results' class='autocomplete-results position-absolute w-100 bg-white border border-top-0 d-none' style='z-index: 1000; max-height: 300px; overflow-y: auto;'></div>
+                </div>
             </form>
+
+            <script>
+            $(document).ready(function() {
+                const students = {$students_json};
+                const searchInput = $('#student-search');
+                const hiddenInput = $('#id_alunos');
+                const resultsContainer = $('#autocomplete-results');
+
+                let selectedIndex = -1;
+
+                // Search functionality
+                searchInput.on('input', function() {
+                    const query = $(this).val().toLowerCase();
+                    selectedIndex = -1;
+
+                    if (query.length < 2) {
+                        resultsContainer.addClass('d-none').empty();
+                        hiddenInput.val('');
+                        return;
+                    }
+
+                    const filteredStudents = students.filter(student =>
+                        student.nome.toLowerCase().includes(query) ||
+                        student.id.toString().includes(query)
+                    );
+
+                    if (filteredStudents.length === 0) {
+                        resultsContainer.addClass('d-none').empty();
+                        return;
+                    }
+
+                    let html = '';
+                    filteredStudents.forEach((student, index) => {
+                        html += `<div class='autocomplete-item p-2 border-bottom cursor-pointer' data-id='\${student.id}' data-index='\${index}'>
+                                    <strong>\${student.nome}</strong> <small class='text-muted'>(\${student.idade} anos) [\${student.id}]</small>
+                                 </div>`;
+                    });
+
+                    resultsContainer.html(html).removeClass('d-none');
+                });
+
+                // Click selection
+                $(document).on('click', '.autocomplete-item', function() {
+                    const studentId = $(this).data('id');
+                    const studentText = $(this).text().trim();
+
+                    searchInput.val(studentText);
+                    hiddenInput.val(studentId);
+                    resultsContainer.addClass('d-none').empty();
+
+                    // Submit form to reload page with selected student
+                    $('form[name=\"alunos\"]').submit();
+                });
+
+                // Keyboard navigation
+                searchInput.on('keydown', function(e) {
+                    const items = $('.autocomplete-item');
+
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                        updateSelection(items);
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        selectedIndex = Math.max(selectedIndex - 1, -1);
+                        updateSelection(items);
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (selectedIndex >= 0 && items.length > 0) {
+                            items.eq(selectedIndex).click();
+                        }
+                    } else if (e.key === 'Escape') {
+                        resultsContainer.addClass('d-none').empty();
+                        selectedIndex = -1;
+                    }
+                });
+
+                function updateSelection(items) {
+                    items.removeClass('bg-light');
+                    if (selectedIndex >= 0) {
+                        items.eq(selectedIndex).addClass('bg-light');
+                    }
+                }
+
+                // Hide results when clicking outside
+                $(document).on('click', function(e) {
+                    if (!$(e.target).closest('.autocomplete-container').length) {
+                        resultsContainer.addClass('d-none').empty();
+                        selectedIndex = -1;
+                    }
+                });
+
+                // Clear selection when input is cleared
+                searchInput.on('keyup', function() {
+                    if ($(this).val() === '') {
+                        hiddenInput.val('');
+                        resultsContainer.addClass('d-none').empty();
+                    }
+                });
+            });
+            </script>
+
+            <style>
+            .autocomplete-item {
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+            }
+            .autocomplete-item:hover {
+                background-color: #f8f9fa !important;
+            }
+            .autocomplete-results {
+                border-radius: 0 0 0.375rem 0.375rem;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            #student-search:focus {
+                border-bottom-left-radius: 0;
+                border-bottom-right-radius: 0;
+            }
+            </style>
         ";
     }
 
@@ -486,12 +623,12 @@ class EmotionController
 
         foreach ($possibleFiles as $filePath) {
             if (file_exists($filePath)) {
-                return "<img src='{$filePath}?cache={$rand}' alt='Imagem do evento' class='foto-evento' style='width: 100%; max-width: 400px; height: 250px; object-fit: cover; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); display: block; margin: 0 auto;' />";
+                return "<img src='{$filePath}?cache={$rand}' alt='Imagem do evento' class='foto-evento' style='width: 100%; max-width: 600px; height: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); display: block; margin: 0 auto;' />";
             }
         }
 
         // If no image found, return placeholder
-        return "<div class='foto-evento bg-light text-muted d-flex align-items-center justify-content-center' style='width: 100%; max-width: 400px; height: 250px; border-radius: 8px; border: 2px dashed #dee2e6; margin: 0 auto;'>" .
+        return "<div class='foto-evento bg-light text-muted d-flex align-items-center justify-content-center' style='width: 100%; max-width: 100%; height: 250px; border-radius: 8px; border: 2px dashed #dee2e6; margin: 0 auto;'>" .
             "<div class='text-center'><i class='fas fa-image fa-3x'></i><br><small>Sem imagem</small></div>" .
             "</div>";
     }
@@ -774,14 +911,14 @@ class EmotionController
         $id_professores,
         $id_modalidades,
         $data_inicio,
-        $data_fim
+        $data_fim,
     ) {
         $result = $this->emotionModel->aulasProfessores(
             $id,
             $id_professores,
             $id_modalidades,
             $data_inicio,
-            $data_fim
+            $data_fim,
         );
 
         return $result;
@@ -2013,6 +2150,28 @@ class EmotionController
         return $nome;
     }
 
+    function nomeProfessor($nome, $alcunha)
+    {
+        if (isset($alcunha)) {
+            $nome = $alcunha;
+            return $nome;
+        }
+
+        $apelido = "";
+        $nome = explode(" ", $nome);
+        if (isset($nome[1])) {
+            $apelido = end($nome);
+        }
+
+        if (isset($apelido)) {
+            $nome = "{$nome[0]} {$apelido}";
+        } else {
+            $nome = "{$nome[0]}";
+        }
+
+        return $nome;
+    }
+
     function alunosTurmaPresencas($id_aulas, $dia, $data)
     {
         $data_aula = $data;
@@ -2353,7 +2512,7 @@ class EmotionController
             $local = isset($local) ? $local : "N/A";
             $localidade = isset($localidade) ? $localidade : "N/A";
             $professores = isset($professores) ? $professores : "0";
-            $alunos_count = isset($alunos_count) ? $alunos_count : "0";
+            $alunos = isset($alunos) ? $alunos : "0";
             $id = isset($id) ? $id : "0";
 
             // Add destaque status indicator with fallback
@@ -2374,7 +2533,7 @@ class EmotionController
                     <td>{$local}</td>
                     <td>{$localidade}</td>
                     <td>{$professores}</td>
-                    <td>{$alunos_count}</td>
+                    <td>{$alunos}</td>
                     <td class='text-center'>{$destaque_indicator}</td>
                 </tr>
             ";
@@ -2710,18 +2869,10 @@ class EmotionController
                                 <div class='progress-bar bg-success' role='progressbar' style='width: {$percentagem}%;'
                                      aria-valuenow='{$percentagem}' aria-valuemin='0' aria-valuemax='100'>{$percentagem}%</div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class='row mt-4'>
-                    <div class='col-12'>
-                        <div class='d-flex justify-content-between align-items-center mb-3'>
-                            <h4 class='mb-0'>Gestão do Evento</h4>
-                            <div>
+                            <div class='mt-3 d-flex gap-2 flex-wrap'>
                                 <button type='button' class='btn " .
             ($destaque ? "btn-destaque-on" : "btn-destaque-off") .
-            " btn-sm me-2'
+            " btn-sm'
                                         id='toggle-destaque-{$id_eventos}'
                                         onclick='toggleDestaque({$id_eventos}, " .
             ($destaque ? "true" : "false") .
@@ -2730,11 +2881,12 @@ class EmotionController
             ($destaque ? "Em Destaque" : "Sem Destaque") .
             "
                                 </button>
-                                <a href='?p=evento_professores&id_eventos={$id_eventos}' class='btn btn-primary btn-sm me-2'>
+                                <a href='?p=evento_professores&id_eventos={$id_eventos}' class='btn btn-primary btn-sm'>
                                     <i class='fas fa-chalkboard-teacher'></i> Gerir Professores
                                 </a>
                             </div>
                         </div>
+
                     </div>
                 </div>
 
@@ -2808,25 +2960,145 @@ class EmotionController
 
     function eventosProfessores($id_eventos)
     {
-        // This would typically show professors associated with an event
-        // For now, return a simple placeholder
+        // Get event details
+        $event_result = $this->emotionModel->evento($id_eventos);
+        $event = $event_result->fetch_array();
+
+        if (!$event) {
+            return "
+                <div class='container'>
+                    <div class='row bg_azul p-3 align-middle'>
+                        <div class='col-8 text-left p-0'>
+                            <h3 class='beje m-0'>Evento não encontrado</h3>
+                        </div>
+                        <div class='col-4 text-end p-0'>
+                            <a href='?p=eventos' class='btn btn-outline-light btn-sm'>← Voltar aos Eventos</a>
+                        </div>
+                    </div>
+                </div>
+            ";
+        }
+
+        extract($event);
+        $nome_evento = $nome;
+        $data_formatada = date("d/m/Y", strtotime($data));
+
+        // Get all professors with their event association status
+        $professores_result = $this->emotionModel->professoresEvento(
+            $id_eventos,
+        );
+        $professores_html = "";
+        $total_professores = 0;
+        $total_associados = 0;
+
+        while ($professor = $professores_result->fetch_array()) {
+            extract($professor);
+            $total_professores++;
+
+            $nome_professor = $this->nomeProfessor($nome, $alcunha);
+            $foto = $this->fotoProfessor($id);
+
+            // Check if professor is associated with this event
+            $associado =
+                isset($professor["id_professor_evento"]) &&
+                $professor["id_professor_evento"] > 0;
+            $id_associacao = $professor["id_professor_evento"] ?? 0;
+
+            if ($associado) {
+                $total_associados++;
+            }
+
+            $associado_checked = $associado ? "checked" : "";
+            $nao_associado_checked = !$associado ? "checked" : "";
+
+            $professores_html .= "
+                <tr>
+                    <td>{$foto}</td>
+                    <td>{$nome_professor}</td>
+
+                    <td>
+                        <div class='btn-group' role='group'>
+                            <input type='radio' class='btn-check professor-evento' name='professor-{$id}-{$id_eventos}'
+                                   id='presente-{$id}-{$id_eventos}' value='1' {$associado_checked}
+                                   data-id-professor='{$id}' data-id-evento='{$id_eventos}' data-id-associacao='{$id_associacao}' autocomplete='off'>
+                            <label class='btn btn-outline-success btn-sm' for='presente-{$id}-{$id_eventos}'>Presente</label>
+
+                            <input type='radio' class='btn-check professor-evento' name='professor-{$id}-{$id_eventos}'
+                                   id='ausente-{$id}-{$id_eventos}' value='0' {$nao_associado_checked}
+                                   data-id-professor='{$id}' data-id-evento='{$id_eventos}' data-id-associacao='{$id_associacao}' autocomplete='off'>
+                            <label class='btn btn-outline-danger btn-sm' for='ausente-{$id}-{$id_eventos}'>Ausente</label>
+                        </div>
+                    </td>
+                </tr>
+            ";
+        }
+
+        $total_nao_associados = $total_professores - $total_associados;
+
         return "
             <div class='container'>
                 <div class='row bg_azul p-3 align-middle'>
                     <div class='col-8 text-left p-0'>
-                        <h3 class='beje m-0'>Professores do Evento</h3>
+                        <h3 class='beje m-0'>Professores - {$nome_evento}</h3>
                     </div>
                     <div class='col-4 text-end p-0'>
-                        <a href='?p=eventos' class='btn btn-outline-light btn-sm'>← Voltar aos Eventos</a>
+                        <a href='?p=evento&id_eventos={$id_eventos}' class='btn btn-outline-light btn-sm'>← Voltar ao Evento</a>
+                    </div>
+                </div>
+
+                <div class='row mt-3'>
+                    <div class='col-12'>
+                        <div class='mb-3'>
+                            <p><strong>Evento:</strong> {$nome_evento}</p>
+                            <p><strong>Data:</strong> {$data_formatada}</p>
+                        </div>
+
+                        <div class='mb-3'>
+                            <div class='row'>
+                                <div class='col-md-4'>
+                                    <div class='card'>
+                                        <div class='card-body text-center'>
+                                            <h5 class='card-title text-success' id='presentes-count-prof'>{$total_associados}</h5>
+                                            <p class='card-text'>Professores Presentes</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class='col-md-4'>
+                                    <div class='card'>
+                                        <div class='card-body text-center'>
+                                            <h5 class='card-title text-danger' id='ausentes-count-prof'>{$total_nao_associados}</h5>
+                                            <p class='card-text'>Professores Ausentes</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class='col-md-4'>
+                                    <div class='card'>
+                                        <div class='card-body text-center'>
+                                            <h5 class='card-title text-info'>{$total_professores}</h5>
+                                            <p class='card-text'>Total de Professores</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class='row mt-4'>
                     <div class='col-12'>
-                        <div class='alert alert-info' role='alert'>
-                            <h4 class='alert-heading'>Funcionalidade em desenvolvimento</h4>
-                            <p>A gestão de professores para eventos está em desenvolvimento.</p>
-                        </div>
+                        <h4>Lista de Professores</h4>
+                        <table class='table table-striped'>
+                            <thead>
+                                <tr>
+                                    <th>Foto</th>
+                                    <th>Nome</th>
+                                    <th>Presença</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {$professores_html}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -3458,6 +3730,68 @@ if (isset($_POST["function"])) {
             }
             break;
 
+        case "professorEvento":
+            header("Content-Type: application/json");
+            try {
+                $id_professor = $_POST["id_professor"];
+                $id_evento = $_POST["id_evento"];
+                $id_associacao = $_POST["id_associacao"];
+                $presente = intval($_POST["presente"]);
+                $action = $_POST["action"];
+
+                if ($presente == 1) {
+                    // Marcar professor como presente
+                    $success = $emotionModel->createProfessorEvento(
+                        $id_professor,
+                        $id_evento,
+                    );
+
+                    if ($success) {
+                        // Buscar o ID da associação criada
+                        $result = $emotionModel->mysqli->query("
+                            SELECT id FROM professores_eventos
+                            WHERE id_professores = '{$id_professor}' AND id_eventos = '{$id_evento}'
+                        ");
+                        if ($result && $result->num_rows > 0) {
+                            $row = $result->fetch_array();
+                            echo json_encode([
+                                "success" => true,
+                                "id_associacao" => $row["id"],
+                            ]);
+                        } else {
+                            echo json_encode([
+                                "success" => false,
+                                "message" => "Erro ao obter ID da associação",
+                            ]);
+                        }
+                    } else {
+                        echo json_encode([
+                            "success" => false,
+                            "message" => "Erro ao associar professor",
+                        ]);
+                    }
+                } else {
+                    // Marcar professor como ausente
+                    $success = $emotionModel->removeProfessorEvento(
+                        $id_professor,
+                        $id_evento,
+                    );
+                    echo json_encode([
+                        "success" => $success,
+                        "id_associacao" => 0,
+                        "message" => $success
+                            ? "Professor marcado como ausente"
+                            : "Erro ao marcar como ausente",
+                    ]);
+                }
+            } catch (Exception $e) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => $e->getMessage(),
+                ]);
+            }
+            break;
+
         case "toggleEventoDestaque":
             header("Content-Type: application/json");
             try {
@@ -3469,68 +3803,6 @@ if (isset($_POST["function"])) {
                     $destaque,
                 );
                 echo json_encode($result);
-            } catch (Exception $e) {
-                echo json_encode([
-                    "success" => false,
-                    "message" => $e->getMessage(),
-                ]);
-            }
-            break;
-
-        case "adicionarProfessorEvento":
-            header("Content-Type: application/json");
-            try {
-                $id_professor = intval($_POST["id_professor"]);
-                $id_evento = intval($_POST["id_evento"]);
-
-                if ($id_professor > 0 && $id_evento > 0) {
-                    $success = $emotionModel->adicionarProfessorEvento(
-                        $id_professor,
-                        $id_evento,
-                    );
-                    echo json_encode([
-                        "success" => $success,
-                        "message" => $success
-                            ? "Professor adicionado com sucesso!"
-                            : "Erro ao adicionar professor",
-                    ]);
-                } else {
-                    echo json_encode([
-                        "success" => false,
-                        "message" => "Dados inválidos",
-                    ]);
-                }
-            } catch (Exception $e) {
-                echo json_encode([
-                    "success" => false,
-                    "message" => $e->getMessage(),
-                ]);
-            }
-            break;
-
-        case "removerProfessorEvento":
-            header("Content-Type: application/json");
-            try {
-                $id_professor = intval($_POST["id_professor"]);
-                $id_evento = intval($_POST["id_evento"]);
-
-                if ($id_professor > 0 && $id_evento > 0) {
-                    $success = $emotionModel->removerProfessorEvento(
-                        $id_professor,
-                        $id_evento,
-                    );
-                    echo json_encode([
-                        "success" => $success,
-                        "message" => $success
-                            ? "Professor removido com sucesso!"
-                            : "Erro ao remover professor",
-                    ]);
-                } else {
-                    echo json_encode([
-                        "success" => false,
-                        "message" => "Dados inválidos",
-                    ]);
-                }
             } catch (Exception $e) {
                 echo json_encode([
                     "success" => false,
