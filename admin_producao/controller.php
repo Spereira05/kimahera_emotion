@@ -635,56 +635,614 @@ class EmotionController
 
     function alunosLista()
     {
-        #Santiago 18/07 18:21
-        /* Script para inserir alunos nas turmas do ano letivo seguinte
-        $dias = $this->diasSemana('');
+        // Get filter parameters
+        $search_name = $_GET["search_name"] ?? "";
+        $filter_idade_min = $_GET["filter_idade_min"] ?? "";
+        $filter_idade_max = $_GET["filter_idade_max"] ?? "";
+        $filter_aniversario = $_GET["filter_aniversario"] ?? "";
+        $selected_id = $_GET["id_alunos"] ?? "";
 
-        $result = $this->emotionModel->mysqli->query
-        ("
-            SELECT `alunos`.`id` AS `id_alunos`, `alunos`.`nome` AS `aluno`, `modalidades`.`nome` AS `modalidade`, `modalidades`.`id` AS `id_modalidades`
-            FROM `alunos_aulas`
-            LEFT JOIN `alunos` ON `alunos`.`id` = `alunos_aulas`.`id_alunos`
-            LEFT JOIN `aulas` ON `aulas`.`id` = `alunos_aulas`.`id_aulas`
-            LEFT JOIN `modalidades` ON `aulas`.`id_modalidades` = `modalidades`.`id`
-            WHERE `alunos`.`ativo` = 1 AND `aulas`.`ativo` = 1
-            GROUP BY `modalidades`.`id`, `alunos`.`id`
-            ORDER BY `alunos`.`nome` ASC
-        ");
-        while($row = $result->fetch_array())
-        {
-            extract($row);
+        // If we have search_name but no selected_id, it's a text-based search
+        // If we have selected_id, it's an ID-based search (from dropdown selection)
+        $is_text_search = !empty($search_name) && empty($selected_id);
 
-            echo "<p>{$aluno} ({$id_alunos}) -> {$modalidade} ({$id_modalidades}) -> </p>";
+        // Get data for autocomplete and filters
+        $students_data = [];
+        $idades_data = [];
+        $selected_student_info = null;
 
-            $result2 = $this->emotionModel->mysqli->query
-            ("
-                SELECT `aulas`.*
-                FROM `aulas`
-                WHERE `aulas`.`id_modalidades` = {$id_modalidades}
-                AND `aulas`.`id_horarios` = 3
-            ");
-            while($row2 = $result2->fetch_array())
-            {
-                extract($row2);
+        // Get all students for autocomplete
+        $students_result = $this->emotionModel->alunos(
+            "`alunos`.`nome` ASC",
+            "",
+        );
+        while ($row = $students_result->fetch_array()) {
+            $idade = $this->idade($row["data_nascimento"]);
+            $student = [
+                "id" => $row["id"],
+                "nome" => $row["nome"],
+                "alcunha" => $row["alcunha"] ?? "",
+                "idade" => $idade,
+                "foto" => $this->fotoAluno($row["id"]),
+                "display" =>
+                    trim($row["nome"] . " " . ($row["alcunha"] ?? "")) .
+                    " ({$idade} anos)",
+            ];
+            $students_data[] = $student;
 
-                foreach($dias as $k => $val)
-                {
-                    if($$k == 1)
-                    {
-                        echo "<p>aluno {$_alunos} / aula {$id} / dia {$k} / {$modalidade}</p>";
+            if (!in_array($idade, $idades_data)) {
+                $idades_data[] = $idade;
+            }
 
-                    }
+            // If this is the selected student
+            if ($selected_id && $selected_id == $row["id"]) {
+                $selected_student_info = $student;
+            }
+        }
+
+        sort($idades_data);
+        $students_json = json_encode($students_data);
+        $selected_display = $selected_student_info
+            ? $selected_student_info["display"]
+            : "";
+
+        // Apply filters to get results using the new search function
+        $filtered_results = $this->getFilteredStudents();
+        if ($filtered_results["success"]) {
+            $table_html = $filtered_results["html"];
+        } else {
+            // Fallback to original results
+            $result = $this->emotionModel->alunos("`alunos`.`nome` ASC", "");
+
+            $tt = $a = 0;
+            $tbody = "";
+            while ($row = $result->fetch_array()) {
+                extract($row);
+
+                $idade = $this->idade($data_nascimento);
+                $mensalidade = $this->mensalidade($id);
+                $tt += $mensalidade;
+
+                $aniversario = date("M d", strtotime($data_nascimento));
+
+                $ativo = "";
+                if (date("m-d", strtotime($data_nascimento)) == date("m-d")) {
+                    $aniversario = "<span class='fw-bolder vermelho'>{$aniversario} 🥳</span>";
+                    $ativo = "ativo";
+                }
+
+                $nome_ee = explode(" ", $nome_ee);
+                $contacto = $telemovel;
+                if ($email_ee) {
+                    $email = $email_ee;
+                }
+                if ($telemovel_ee) {
+                    $contacto = "{$telemovel_ee} ({$nome_ee[0]})";
+                }
+
+                $nome = $this->nomeAluno($nome, $alcunha);
+                $foto = $this->fotoAluno($id);
+
+                $assiduidade = $this->assiduidade("", "", $assiduidade);
+
+                $tbody .= "
+                    <tr class='{$ativo}' data-student-id='{$id}' data-student-name='{$nome}'>
+                        <td>{$id}</td>
+                        <td>{$foto}</td>
+                        <td><a href='?p=aluno&id_alunos={$id}'>{$nome}</a></td>
+                        <td>{$assiduidade[1]}</td>
+                        <td>{$aniversario}</td>
+                        <td>{$idade}</td>
+                        <td>{$email}</td>
+                        <td>{$contacto}</td>
+                        <td>{$mensalidade}€</td>
+                        <td><a href='pdf.php?id_alunos={$id}&generate=1' class='btn btn-primary btn-sm' target='_blank' title='Gerar Certificado'><i class='fas fa-certificate'></i></a></td>
+                    </tr>
+                ";
+
+                $a++;
+            }
+
+            $table_html =
+                "
+                <div class='table-responsive'>
+                    <table class='alunos table table-striped'>
+                        <thead class='bg_azul text-white'>
+                            <th>ID</th>
+                            <th>Foto</th>
+                            <th>Nome</th>
+                            <th>Assiduidade</th>
+                            <th>Aniversário</th>
+                            <th>Idade</th>
+                            <th>Email</th>
+                            <th>Contacto</th>
+                            <th>Mensalidade</th>
+                            <th>Certificado</th>
+                        </thead>
+                        <tbody>
+                            {$tbody}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class='d-flex justify-content-between align-items-end mb-4 mt-4'>
+                    <div>
+                        <button class='btn btn-success btn-lg' onclick='downloadAllStudentsCertificates()'
+                                title='Download de todos os certificados dos alunos na página atual'>
+                            <i class='fas fa-download me-2'></i>
+                            Download Todos os Certificados
+                        </button>
+                        <small class='d-block text-muted mt-1'>
+                            <i class='fas fa-info-circle me-1'></i>
+                            Gera e descarrega certificados para todos os alunos visíveis
+                        </small>
+                    </div>
+                    <div class='text-end'>
+                        <h5>Alunos: {$a}</h5>
+                        <h5>Total Mensalidades: " .
+                number_format($tt, 0) .
+                "€</h5>
+                        <h5>Total S/IVA: " .
+                number_format($tt / 1.23, 0) .
+                "€</h5>
+                    </div>
+                </div>
+            ";
+        }
+
+        // Build filter interface
+        $filter_interface = "
+        <div class='container-fluid py-4'>
+            <div class='row mb-4'>
+                <div class='col-12'>
+                    <div class='card shadow-sm border-0'>
+                        <div class='card-header bg_azul beje py-3'>
+                            <h5 class='mb-0'>Filtros de Pesquisa</h5>
+                        </div>
+                        <div class='card-body'>
+                            <form method='get' id='students-filter-form' name='alunos'>
+                                <input type='hidden' name='p' value='alunos'>
+                                <div class='row g-3 align-items-end'>
+                                    <div class='col-md-4'>
+                                        <label for='student-search-enhanced' class='form-label'>Pesquisar por Nome:</label>
+                                        <div class='position-relative'>
+                                            <input type='text' id='student-search-enhanced' name='search_name'
+                                                   class='form-control'
+                                                   placeholder='Digite o nome do aluno...' value='{$search_name}'
+                                                   autocomplete='off'>
+                                            <input type='hidden' id='id_alunos' name='id_alunos' value='{$selected_id}'>
+                                            <div id='autocomplete-dropdown'
+                                                 class='autocomplete-dropdown position-absolute w-100 bg-white border border-top-0 rounded-bottom shadow-lg d-none'
+                                                 style='z-index: 2147483647; max-height: 300px; overflow-y: auto;'></div>
+                                        </div>
+                                    </div>
+                                    <div class='col-md-3'>
+                                        <label for='filter-idade-min' class='form-label'>Idade Mínima:</label>
+                                        <select id='filter-idade-min' name='filter_idade_min' class='form-select'>
+                                            <option value=''>Qualquer</option>";
+
+        foreach ($idades_data as $idade) {
+            $selected = $filter_idade_min == $idade ? "selected" : "";
+            $filter_interface .= "<option value='{$idade}' {$selected}>{$idade} anos</option>";
+        }
+
+        $filter_interface .= "
+                                        </select>
+                                    </div>
+                                    <div class='col-md-3'>
+                                        <label for='filter-idade-max' class='form-label'>Idade Máxima:</label>
+                                        <select id='filter-idade-max' name='filter_idade_max' class='form-select'>
+                                            <option value=''>Qualquer</option>";
+
+        foreach ($idades_data as $idade) {
+            $selected = $filter_idade_max == $idade ? "selected" : "";
+            $filter_interface .= "<option value='{$idade}' {$selected}>{$idade} anos</option>";
+        }
+
+        $filter_interface .=
+            "
+                                        </select>
+                                    </div>
+                                    <div class='col-md-2'>
+                                        <label for='filter-aniversario' class='form-label'>Aniversários:</label>
+                                        <select id='filter-aniversario' name='filter_aniversario' class='form-select'>
+                                            <option value=''>Todos</option>
+                                            <option value='hoje' " .
+            ($filter_aniversario == "hoje" ? "selected" : "") .
+            ">Hoje</option>
+                                            <option value='mes' " .
+            ($filter_aniversario == "mes" ? "selected" : "") .
+            ">Este mês</option>
+                                            <option value='semana' " .
+            ($filter_aniversario == "semana" ? "selected" : "") .
+            ">Esta semana</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class='row mt-3'>
+                                    <div class='col-12 text-center'>
+                                        <button type='submit' class='btn btn-primary me-2'>Aplicar Filtros</button>
+                                        <button type='button' id='clear-all-filters' class='btn btn-outline-secondary'>Limpar Filtros</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class='row'>
+                <div class='col-12'>
+                    <div class='card shadow-sm border-0'>
+                        <div class='card-header bg_azul beje'>
+                            <h5 class='mb-0'>Lista de Alunos</h5>
+                        </div>
+                        <div class='card-body p-0'>
+                            {$table_html}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        $(document).ready(function() {
+            const students = {$students_json};
+            const searchInput = $('#student-search-enhanced');
+            const dropdown = $('#autocomplete-dropdown');
+            const hiddenInput = $('#id_alunos');
+
+            let selectedIndex = -1;
+            let searchTimeout;
+
+            // Filter students based on query - IMPROVED LOGIC FROM HORARIO
+            function filterStudents(query) {
+                query = query.toLowerCase();
+                return students.filter(student =>
+                    student.nome.toLowerCase().includes(query) ||
+                    (student.alcunha && student.alcunha.toLowerCase().includes(query)) ||
+                    student.id.toString().includes(query)
+                ).sort((a, b) => {
+                    const aName = a.nome.toLowerCase();
+                    const bName = b.nome.toLowerCase();
+
+                    // Prioritize exact matches that start with the query
+                    if (aName.startsWith(query) && !bName.startsWith(query)) return -1;
+                    if (!aName.startsWith(query) && bName.startsWith(query)) return 1;
+
+                    return aName.localeCompare(bName);
+                });
+            }
+
+            // Render autocomplete results
+            function renderResults(filteredStudents) {
+                if (filteredStudents.length === 0) {
+                    dropdown.html(\`
+                        <div class='no-results'>
+                            <i class='fas fa-user-slash fa-2x mb-2' style='color: #a92b4d;'></i>
+                            <p class='mb-0'>Nenhum aluno encontrado</p>
+                            <small>Tente pesquisar com termos diferentes</small>
+                        </div>
+                    \`);
+                    return;
+                }
+
+                let html = '';
+                filteredStudents.forEach((student, index) => {
+                    html += \`
+                        <div class='autocomplete-item' data-student-id='\${student.id}' data-index='\${index}'>
+                            <div class='student-info'>
+                                <div class='student-name'>\${student.nome}\${student.alcunha ? ' (' + student.alcunha + ')' : ''}</div>
+                                <div class='student-details'>\${student.idade} anos • ID: \${student.id}</div>
+                            </div>
+                        </div>
+                    \`;
+                });
+                dropdown.html(html);
+            }
+
+            // Update selection highlight
+            function updateSelection() {
+                const items = dropdown.find('.autocomplete-item');
+                items.removeClass('selected');
+
+                if (selectedIndex >= 0 && selectedIndex < items.length) {
+                    items.eq(selectedIndex).addClass('selected');
                 }
             }
-            echo "<hr/>";
+
+            // Select a student - IMPROVED LOGIC FROM HORARIO
+            function selectStudent(studentId) {
+                const student = students.find(s => s.id == studentId);
+                if (!student) return;
+
+                // Update input and hidden field
+                searchInput.val(student.display);
+                hiddenInput.val(studentId);
+
+                // Hide dropdown
+                dropdown.addClass('d-none');
+                selectedIndex = -1;
+
+                // Submit form to reload page with selected student (this makes backend filtering work properly)
+                $('form[name=\"alunos\"]').submit();
+            }
+
+            // Search input handler - IMPROVED LOGIC FROM HORARIO
+            searchInput.on('input', function() {
+                const query = $(this).val();
+
+                // Clear hidden field when typing (allows text search to work)
+                const selectedStudent = students.find(s => s.id == hiddenInput.val());
+                if (hiddenInput.val() && searchInput.val() !== (selectedStudent ? selectedStudent.display : '')) {
+                    hiddenInput.val('');
+                }
+
+                // Clear previous timeout
+                clearTimeout(searchTimeout);
+
+                if (query.length < 2) {
+                    dropdown.addClass('d-none');
+                    selectedIndex = -1;
+                    return;
+                }
+
+                // Debounce search with improved timing
+                searchTimeout = setTimeout(() => {
+                    const filteredStudents = filterStudents(query);
+                    renderResults(filteredStudents);
+                    dropdown.removeClass('d-none');
+                    selectedIndex = -1;
+                }, 150);
+            });
+
+            // Keyboard navigation - IMPROVED LOGIC FROM HORARIO
+            searchInput.on('keydown', function(e) {
+                const items = dropdown.find('.autocomplete-item');
+
+                switch(e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                        updateSelection();
+                        break;
+
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        selectedIndex = Math.max(selectedIndex - 1, -1);
+                        updateSelection();
+                        break;
+
+                    case 'Enter':
+                        e.preventDefault();
+                        if (selectedIndex >= 0 && items.length > 0) {
+                            const studentId = items.eq(selectedIndex).data('student-id');
+                            selectStudent(studentId);
+                        }
+                        break;
+
+                    case 'Escape':
+                        dropdown.addClass('d-none');
+                        selectedIndex = -1;
+                        break;
+                }
+            });
+
+            // Click selection
+            $(document).on('click', '.autocomplete-item', function() {
+                const studentId = $(this).data('student-id');
+                selectStudent(studentId);
+            });
+
+            // Hide dropdown when clicking outside - IMPROVED LOGIC FROM HORARIO
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#student-search-enhanced, #autocomplete-dropdown').length) {
+                    dropdown.addClass('d-none');
+                    selectedIndex = -1;
+                }
+            });
+
+            // Clear filters functionality
+            $('#clear-all-filters').on('click', function() {
+                window.location.href = '?p=alunos';
+            });
+
+            // Initialize: if there's text in search but no selected ID, allow text-based search
+            if (searchInput.val() && !hiddenInput.val()) {
+                // This allows the backend to process text-based search instead of ID-based search
+                console.log('Text-based search mode enabled for:', searchInput.val());
+            }
+        });
+        </script>
+        ";
+
+        return $filter_interface;
+    }
+
+    // Reusable student search function based on horario logic
+    function searchStudents($search_params = [])
+    {
+        $search_name =
+            $search_params["search_name"] ?? ($_GET["search_name"] ?? "");
+        $filter_idade_min =
+            $search_params["filter_idade_min"] ??
+            ($_GET["filter_idade_min"] ?? "");
+        $filter_idade_max =
+            $search_params["filter_idade_max"] ??
+            ($_GET["filter_idade_max"] ?? "");
+        $filter_aniversario =
+            $search_params["filter_aniversario"] ??
+            ($_GET["filter_aniversario"] ?? "");
+        $selected_id =
+            $search_params["id_alunos"] ?? ($_GET["id_alunos"] ?? "");
+
+        // Get all students first
+        $all_students = [];
+        $students_result = $this->emotionModel->alunos(
+            "`alunos`.`nome` ASC",
+            "",
+        );
+
+        while ($row = $students_result->fetch_array()) {
+            $idade = $this->idade($row["data_nascimento"]);
+            $student = [
+                "id" => $row["id"],
+                "nome" => $row["nome"],
+                "alcunha" => $row["alcunha"] ?? "",
+                "idade" => $idade,
+                "data_nascimento" => $row["data_nascimento"],
+                "row_data" => $row, // Keep original row data
+            ];
+            $all_students[] = $student;
         }
-        */
 
-        $result = $this->emotionModel->alunos("`alunos`.`nome` ASC", "");
+        // Apply filters - same logic as horario page
+        $filtered_students = [];
 
+        foreach ($all_students as $student) {
+            $match = true;
+
+            // If specific ID is selected, only show that student
+            if (!empty($selected_id) && $selected_id != $student["id"]) {
+                continue;
+            }
+
+            // Name search filter (same as horario page logic)
+            if (!empty($search_name)) {
+                $search_lower = strtolower($search_name);
+                $nome_match =
+                    strpos(strtolower($student["nome"]), $search_lower) !==
+                    false;
+                $alcunha_match =
+                    !empty($student["alcunha"]) &&
+                    strpos(strtolower($student["alcunha"]), $search_lower) !==
+                        false;
+                $id_match =
+                    strpos((string) $student["id"], $search_name) !== false;
+
+                if (!$nome_match && !$alcunha_match && !$id_match) {
+                    $match = false;
+                }
+            }
+
+            // Age filters
+            if (
+                !empty($filter_idade_min) &&
+                $student["idade"] < intval($filter_idade_min)
+            ) {
+                $match = false;
+            }
+            if (
+                !empty($filter_idade_max) &&
+                $student["idade"] > intval($filter_idade_max)
+            ) {
+                $match = false;
+            }
+
+            // Birthday filters
+            if (!empty($filter_aniversario)) {
+                $birthday_match = false;
+                $data_nascimento = $student["data_nascimento"];
+
+                switch ($filter_aniversario) {
+                    case "hoje":
+                        if (
+                            date("m-d", strtotime($data_nascimento)) ==
+                            date("m-d")
+                        ) {
+                            $birthday_match = true;
+                        }
+                        break;
+                    case "mes":
+                        if (
+                            date("m", strtotime($data_nascimento)) == date("m")
+                        ) {
+                            $birthday_match = true;
+                        }
+                        break;
+                    case "semana":
+                        $birthday_day = date(
+                            "z",
+                            strtotime(
+                                date("Y") .
+                                    "-" .
+                                    date("m-d", strtotime($data_nascimento)),
+                            ),
+                        );
+                        $current_day = date("z");
+                        if (
+                            $birthday_day >= $current_day &&
+                            $birthday_day <= $current_day + 7
+                        ) {
+                            $birthday_match = true;
+                        }
+                        break;
+                }
+
+                if (!$birthday_match) {
+                    $match = false;
+                }
+            }
+
+            if ($match) {
+                $filtered_students[] = $student;
+            }
+        }
+
+        // Sort results - prioritize exact matches like horario page
+        if (!empty($search_name)) {
+            $search_lower = strtolower($search_name);
+            usort($filtered_students, function ($a, $b) use ($search_lower) {
+                $a_name = strtolower($a["nome"]);
+                $b_name = strtolower($b["nome"]);
+
+                // Prioritize matches that start with the search query
+                if (
+                    strpos($a_name, $search_lower) === 0 &&
+                    strpos($b_name, $search_lower) !== 0
+                ) {
+                    return -1;
+                }
+                if (
+                    strpos($a_name, $search_lower) !== 0 &&
+                    strpos($b_name, $search_lower) === 0
+                ) {
+                    return 1;
+                }
+
+                return strcmp($a_name, $b_name);
+            });
+        }
+
+        return $filtered_students;
+    }
+
+    function getFilteredStudents()
+    {
+        // Use the new reusable search function
+        $filtered_students = $this->searchStudents();
+
+        // Convert student objects back to row data for HTML generation
+        $filtered_rows = [];
+        foreach ($filtered_students as $student) {
+            $filtered_rows[] = $student["row_data"];
+        }
+
+        // Generate HTML
+        $html = $this->generateFilteredStudentsHTML($filtered_rows);
+
+        return [
+            "success" => true,
+            "html" => $html,
+            "count" => count($filtered_rows),
+        ];
+    }
+
+    function generateFilteredStudentsHTML($students)
+    {
         $tt = $a = 0;
         $tbody = "";
-        while ($row = $result->fetch_array()) {
+
+        foreach ($students as $row) {
             extract($row);
 
             $idade = $this->idade($data_nascimento);
@@ -708,27 +1266,17 @@ class EmotionController
                 $contacto = "{$telemovel_ee} ({$nome_ee[0]})";
             }
 
-            $nome = $this->nomeAluno($nome, $alcunha);
+            $nome_display = $this->nomeAluno($nome, $alcunha);
             $foto = $this->fotoAluno($id);
 
-            /*
-            #Atualizar Mails
-            $contacto = $nome_ee[0];
-            if(!$contacto){$contacto = $nome;}
-            else {$contacto = $nome_ee[0].' '.end($nome_ee);}
-            #//Atualizar Mails
-            */
-
-            //if($foto){continue;} #Alunos sem foto /#
-
-            $assiduidade = $this->assiduidade("", "", $assiduidade);
+            $assiduidade_display = $this->assiduidade("", "", $assiduidade);
 
             $tbody .= "
-                <tr class='{$ativo}' data-student-id='{$id}' data-student-name='{$nome}'>
+                <tr class='{$ativo}' data-student-id='{$id}' data-student-name='{$nome_display}'>
                     <td>{$id}</td>
                     <td>{$foto}</td>
-                    <td><a href='?p=aluno&id_alunos={$id}'>{$nome}</a></td>
-                    <td>{$assiduidade[1]}</td>
+                    <td><a href='?p=aluno&id_alunos={$id}'>{$nome_display}</a></td>
+                    <td>{$assiduidade_display[1]}</td>
                     <td>{$aniversario}</td>
                     <td>{$idade}</td>
                     <td>{$email}</td>
@@ -742,25 +1290,27 @@ class EmotionController
         }
 
         return "
-            <table class='alunos table table-striped'>
-                <thead>
-                    <th>ID</th>
-                    <th>Foto</th>
-                    <th>Nome</th>
-                    <th>Assiduidade</th>
-                    <th>Aniversário</th>
-                    <th>Idade</th>
-                    <th>Email</th>
-                    <th>Contacto</th>
-                    <th>Mensalidade</th>
-                    <th>Certificado</th>
-                </thead>
-                <tbody>
-                    {$tbody}
-                </tbody>
-            </table>
+            <div class='table-responsive'>
+                <table class='alunos table table-striped'>
+                    <thead class='bg_azul text-white'>
+                        <th>ID</th>
+                        <th>Foto</th>
+                        <th>Nome</th>
+                        <th>Assiduidade</th>
+                        <th>Aniversário</th>
+                        <th>Idade</th>
+                        <th>Email</th>
+                        <th>Contacto</th>
+                        <th>Mensalidade</th>
+                        <th>Certificado</th>
+                    </thead>
+                    <tbody>
+                        {$tbody}
+                    </tbody>
+                </table>
+            </div>
 
-            <div class='d-flex justify-content-between align-items-end mb-4'>
+            <div class='d-flex justify-content-between align-items-end mb-4 mt-4'>
                 <div>
                     <button class='btn btn-success btn-lg' onclick='downloadAllStudentsCertificates()'
                             title='Download de todos os certificados dos alunos na página atual'>
