@@ -635,491 +635,116 @@ class EmotionController
 
     function alunosLista()
     {
+        // Get pagination parameters
+        $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
+        $per_page = 25;
+        $offset = ($page - 1) * $per_page;
+
         // Get filter parameters
         $search_name = $_GET["search_name"] ?? "";
         $filter_idade_min = $_GET["filter_idade_min"] ?? "";
         $filter_idade_max = $_GET["filter_idade_max"] ?? "";
-        $filter_aniversario = $_GET["filter_aniversario"] ?? "";
-        $selected_id = $_GET["id_alunos"] ?? "";
+        $filter_aniversario_date = $_GET["filter_aniversario_date"] ?? "";
+        $search_phone = $_GET["search_phone"] ?? "";
 
-        // If we have search_name but no selected_id, it's a text-based search
-        // If we have selected_id, it's an ID-based search (from dropdown selection)
-        $is_text_search = !empty($search_name) && empty($selected_id);
-
-        // Get data for autocomplete and filters
-        $students_data = [];
-        $idades_data = [];
-        $selected_student_info = null;
-
-        // Get all students for autocomplete
-        $students_result = $this->emotionModel->alunos(
-            "`alunos`.`nome` ASC",
-            "",
-        );
-        while ($row = $students_result->fetch_array()) {
-            $idade = $this->idade($row["data_nascimento"]);
-            $student = [
-                "id" => $row["id"],
-                "nome" => $row["nome"],
-                "alcunha" => $row["alcunha"] ?? "",
-                "idade" => $idade,
-                "foto" => $this->fotoAluno($row["id"]),
-                "display" =>
-                    trim($row["nome"] . " " . ($row["alcunha"] ?? "")) .
-                    " ({$idade} anos)",
-            ];
-            $students_data[] = $student;
-
-            if (!in_array($idade, $idades_data)) {
-                $idades_data[] = $idade;
-            }
-
-            // If this is the selected student
-            if ($selected_id && $selected_id == $row["id"]) {
-                $selected_student_info = $student;
-            }
-        }
-
-        sort($idades_data);
-        $students_json = json_encode($students_data);
-        $selected_display = $selected_student_info
-            ? $selected_student_info["display"]
-            : "";
-
-        // Apply filters to get results using the new search function
-        $filtered_results = $this->getFilteredStudents();
-        if ($filtered_results["success"]) {
-            $table_html = $filtered_results["html"];
-        } else {
-            // Fallback to original results
-            $result = $this->emotionModel->alunos("`alunos`.`nome` ASC", "");
-
-            $tt = $a = 0;
-            $tbody = "";
-            while ($row = $result->fetch_array()) {
-                extract($row);
-
-                $idade = $this->idade($data_nascimento);
-                $mensalidade = $this->mensalidade($id);
-                $tt += $mensalidade;
-
-                $aniversario = date("M d", strtotime($data_nascimento));
-
-                $ativo = "";
-                if (date("m-d", strtotime($data_nascimento)) == date("m-d")) {
-                    $aniversario = "<span class='fw-bolder vermelho'>{$aniversario} 🥳</span>";
-                    $ativo = "ativo";
-                }
-
-                $nome_ee = explode(" ", $nome_ee);
-                $contacto = $telemovel;
-                if ($email_ee) {
-                    $email = $email_ee;
-                }
-                if ($telemovel_ee) {
-                    $contacto = "{$telemovel_ee} ({$nome_ee[0]})";
-                }
-
-                $nome = $this->nomeAluno($nome, $alcunha);
-                $foto = $this->fotoAluno($id);
-
-                $assiduidade = $this->assiduidade("", "", $assiduidade);
-
-                $tbody .= "
-                    <tr class='{$ativo}' data-student-id='{$id}' data-student-name='{$nome}'>
-                        <td>{$id}</td>
-                        <td>{$foto}</td>
-                        <td><a href='?p=aluno&id_alunos={$id}'>{$nome}</a></td>
-                        <td>{$assiduidade[1]}</td>
-                        <td>{$aniversario}</td>
-                        <td>{$idade}</td>
-                        <td>{$email}</td>
-                        <td>{$contacto}</td>
-                        <td>{$mensalidade}€</td>
-                        <td><a href='pdf.php?id_alunos={$id}&generate=1' class='btn btn-primary btn-sm' target='_blank' title='Gerar Certificado'><i class='fas fa-certificate'></i></a></td>
-                    </tr>
-                ";
-
-                $a++;
-            }
-
-            $table_html =
-                "
-                <div class='table-responsive'>
-                    <table class='alunos table table-striped'>
-                        <thead class='bg_azul text-white'>
-                            <th>ID</th>
-                            <th>Foto</th>
-                            <th>Nome</th>
-                            <th>Assiduidade</th>
-                            <th>Aniversário</th>
-                            <th>Idade</th>
-                            <th>Email</th>
-                            <th>Contacto</th>
-                            <th>Mensalidade</th>
-                            <th>Certificado</th>
-                        </thead>
-                        <tbody>
-                            {$tbody}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class='d-flex justify-content-between align-items-end mb-4 mt-4'>
-                    <div>
-                        <button class='btn btn-success btn-lg' onclick='downloadAllStudentsCertificates()'
-                                title='Download de todos os certificados dos alunos na página atual'>
-                            <i class='fas fa-download me-2'></i>
-                            Download Todos os Certificados
-                        </button>
-                        <small class='d-block text-muted mt-1'>
-                            <i class='fas fa-info-circle me-1'></i>
-                            Gera e descarrega certificados para todos os alunos visíveis
-                        </small>
-                    </div>
-                    <div class='text-end'>
-                        <h5>Alunos: {$a}</h5>
-                        <h5>Total Mensalidades: " .
-                number_format($tt, 0) .
-                "€</h5>
-                        <h5>Total S/IVA: " .
-                number_format($tt / 1.23, 0) .
-                "€</h5>
-                    </div>
-                </div>
-            ";
-        }
-
-        // Build filter interface
-        $filter_interface = "
-        <div class='container-fluid py-4'>
-            <div class='row mb-4'>
-                <div class='col-12'>
-                    <div class='card shadow-sm border-0'>
-                        <div class='card-header bg_azul beje py-3'>
-                            <h5 class='mb-0'>Filtros de Pesquisa</h5>
-                        </div>
-                        <div class='card-body'>
-                            <form method='get' id='students-filter-form' name='alunos'>
-                                <input type='hidden' name='p' value='alunos'>
-                                <div class='row g-3 align-items-end'>
-                                    <div class='col-md-4'>
-                                        <label for='student-search-enhanced' class='form-label'>Pesquisar por Nome:</label>
-                                        <div class='position-relative'>
-                                            <input type='text' id='student-search-enhanced' name='search_name'
-                                                   class='form-control'
-                                                   placeholder='Digite o nome do aluno...' value='{$search_name}'
-                                                   autocomplete='off'>
-                                            <input type='hidden' id='id_alunos' name='id_alunos' value='{$selected_id}'>
-                                            <div id='autocomplete-dropdown'
-                                                 class='autocomplete-dropdown position-absolute w-100 bg-white border border-top-0 rounded-bottom shadow-lg d-none'
-                                                 style='z-index: 2147483647; max-height: 300px; overflow-y: auto;'></div>
-                                        </div>
-                                    </div>
-                                    <div class='col-md-3'>
-                                        <label for='filter-idade-min' class='form-label'>Idade Mínima:</label>
-                                        <select id='filter-idade-min' name='filter_idade_min' class='form-select'>
-                                            <option value=''>Qualquer</option>";
-
-        foreach ($idades_data as $idade) {
-            $selected = $filter_idade_min == $idade ? "selected" : "";
-            $filter_interface .= "<option value='{$idade}' {$selected}>{$idade} anos</option>";
-        }
-
-        $filter_interface .= "
-                                        </select>
-                                    </div>
-                                    <div class='col-md-3'>
-                                        <label for='filter-idade-max' class='form-label'>Idade Máxima:</label>
-                                        <select id='filter-idade-max' name='filter_idade_max' class='form-select'>
-                                            <option value=''>Qualquer</option>";
-
-        foreach ($idades_data as $idade) {
-            $selected = $filter_idade_max == $idade ? "selected" : "";
-            $filter_interface .= "<option value='{$idade}' {$selected}>{$idade} anos</option>";
-        }
-
-        $filter_interface .=
-            "
-                                        </select>
-                                    </div>
-                                    <div class='col-md-2'>
-                                        <label for='filter-aniversario' class='form-label'>Aniversários:</label>
-                                        <select id='filter-aniversario' name='filter_aniversario' class='form-select'>
-                                            <option value=''>Todos</option>
-                                            <option value='hoje' " .
-            ($filter_aniversario == "hoje" ? "selected" : "") .
-            ">Hoje</option>
-                                            <option value='mes' " .
-            ($filter_aniversario == "mes" ? "selected" : "") .
-            ">Este mês</option>
-                                            <option value='semana' " .
-            ($filter_aniversario == "semana" ? "selected" : "") .
-            ">Esta semana</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class='row mt-3'>
-                                    <div class='col-12 text-center'>
-                                        <button type='submit' class='btn btn-primary me-2'>Aplicar Filtros</button>
-                                        <button type='button' id='clear-all-filters' class='btn btn-outline-secondary'>Limpar Filtros</button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class='row'>
-                <div class='col-12'>
-                    <div class='card shadow-sm border-0'>
-                        <div class='card-header bg_azul beje'>
-                            <h5 class='mb-0'>Lista de Alunos</h5>
-                        </div>
-                        <div class='card-body p-0'>
-                            {$table_html}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <script>
-        $(document).ready(function() {
-            const students = {$students_json};
-            const searchInput = $('#student-search-enhanced');
-            const dropdown = $('#autocomplete-dropdown');
-            const hiddenInput = $('#id_alunos');
-
-            let selectedIndex = -1;
-            let searchTimeout;
-
-            // Filter students based on query - IMPROVED LOGIC FROM HORARIO
-            function filterStudents(query) {
-                query = query.toLowerCase();
-                return students.filter(student =>
-                    student.nome.toLowerCase().includes(query) ||
-                    (student.alcunha && student.alcunha.toLowerCase().includes(query)) ||
-                    student.id.toString().includes(query)
-                ).sort((a, b) => {
-                    const aName = a.nome.toLowerCase();
-                    const bName = b.nome.toLowerCase();
-
-                    // Prioritize exact matches that start with the query
-                    if (aName.startsWith(query) && !bName.startsWith(query)) return -1;
-                    if (!aName.startsWith(query) && bName.startsWith(query)) return 1;
-
-                    return aName.localeCompare(bName);
-                });
-            }
-
-            // Render autocomplete results
-            function renderResults(filteredStudents) {
-                if (filteredStudents.length === 0) {
-                    dropdown.html(\`
-                        <div class='no-results'>
-                            <i class='fas fa-user-slash fa-2x mb-2' style='color: #a92b4d;'></i>
-                            <p class='mb-0'>Nenhum aluno encontrado</p>
-                            <small>Tente pesquisar com termos diferentes</small>
-                        </div>
-                    \`);
-                    return;
-                }
-
-                let html = '';
-                filteredStudents.forEach((student, index) => {
-                    html += \`
-                        <div class='autocomplete-item' data-student-id='\${student.id}' data-index='\${index}'>
-                            <div class='student-info'>
-                                <div class='student-name'>\${student.nome}\${student.alcunha ? ' (' + student.alcunha + ')' : ''}</div>
-                                <div class='student-details'>\${student.idade} anos • ID: \${student.id}</div>
-                            </div>
-                        </div>
-                    \`;
-                });
-                dropdown.html(html);
-            }
-
-            // Update selection highlight
-            function updateSelection() {
-                const items = dropdown.find('.autocomplete-item');
-                items.removeClass('selected');
-
-                if (selectedIndex >= 0 && selectedIndex < items.length) {
-                    items.eq(selectedIndex).addClass('selected');
-                }
-            }
-
-            // Select a student - IMPROVED LOGIC FROM HORARIO
-            function selectStudent(studentId) {
-                const student = students.find(s => s.id == studentId);
-                if (!student) return;
-
-                // Update input and hidden field
-                searchInput.val(student.display);
-                hiddenInput.val(studentId);
-
-                // Hide dropdown
-                dropdown.addClass('d-none');
-                selectedIndex = -1;
-
-                // Submit form to reload page with selected student (this makes backend filtering work properly)
-                $('form[name=\"alunos\"]').submit();
-            }
-
-            // Search input handler - IMPROVED LOGIC FROM HORARIO
-            searchInput.on('input', function() {
-                const query = $(this).val();
-
-                // Clear hidden field when typing (allows text search to work)
-                const selectedStudent = students.find(s => s.id == hiddenInput.val());
-                if (hiddenInput.val() && searchInput.val() !== (selectedStudent ? selectedStudent.display : '')) {
-                    hiddenInput.val('');
-                }
-
-                // Clear previous timeout
-                clearTimeout(searchTimeout);
-
-                if (query.length < 2) {
-                    dropdown.addClass('d-none');
-                    selectedIndex = -1;
-                    return;
-                }
-
-                // Debounce search with improved timing
-                searchTimeout = setTimeout(() => {
-                    const filteredStudents = filterStudents(query);
-                    renderResults(filteredStudents);
-                    dropdown.removeClass('d-none');
-                    selectedIndex = -1;
-                }, 150);
-            });
-
-            // Keyboard navigation - IMPROVED LOGIC FROM HORARIO
-            searchInput.on('keydown', function(e) {
-                const items = dropdown.find('.autocomplete-item');
-
-                switch(e.key) {
-                    case 'ArrowDown':
-                        e.preventDefault();
-                        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-                        updateSelection();
-                        break;
-
-                    case 'ArrowUp':
-                        e.preventDefault();
-                        selectedIndex = Math.max(selectedIndex - 1, -1);
-                        updateSelection();
-                        break;
-
-                    case 'Enter':
-                        e.preventDefault();
-                        if (selectedIndex >= 0 && items.length > 0) {
-                            const studentId = items.eq(selectedIndex).data('student-id');
-                            selectStudent(studentId);
-                        }
-                        break;
-
-                    case 'Escape':
-                        dropdown.addClass('d-none');
-                        selectedIndex = -1;
-                        break;
-                }
-            });
-
-            // Click selection
-            $(document).on('click', '.autocomplete-item', function() {
-                const studentId = $(this).data('student-id');
-                selectStudent(studentId);
-            });
-
-            // Hide dropdown when clicking outside - IMPROVED LOGIC FROM HORARIO
-            $(document).on('click', function(e) {
-                if (!$(e.target).closest('#student-search-enhanced, #autocomplete-dropdown').length) {
-                    dropdown.addClass('d-none');
-                    selectedIndex = -1;
-                }
-            });
-
-            // Clear filters functionality
-            $('#clear-all-filters').on('click', function() {
-                window.location.href = '?p=alunos';
-            });
-
-            // Initialize: if there's text in search but no selected ID, allow text-based search
-            if (searchInput.val() && !hiddenInput.val()) {
-                // This allows the backend to process text-based search instead of ID-based search
-                console.log('Text-based search mode enabled for:', searchInput.val());
-            }
-        });
-        </script>
-        ";
-
-        return $filter_interface;
-    }
-
-    // Reusable student search function based on horario logic
-    function searchStudents($search_params = [])
-    {
-        $search_name =
-            $search_params["search_name"] ?? ($_GET["search_name"] ?? "");
-        $filter_idade_min =
-            $search_params["filter_idade_min"] ??
-            ($_GET["filter_idade_min"] ?? "");
-        $filter_idade_max =
-            $search_params["filter_idade_max"] ??
-            ($_GET["filter_idade_max"] ?? "");
-        $filter_aniversario =
-            $search_params["filter_aniversario"] ??
-            ($_GET["filter_aniversario"] ?? "");
-        $selected_id =
-            $search_params["id_alunos"] ?? ($_GET["id_alunos"] ?? "");
-
-        // Get all students first
+        // Get all students for filtering
         $all_students = [];
-        $students_result = $this->emotionModel->alunos(
-            "`alunos`.`nome` ASC",
-            "",
-        );
-
-        while ($row = $students_result->fetch_array()) {
+        $result = $this->emotionModel->alunos("`alunos`.`nome` ASC", "");
+        while ($row = $result->fetch_array()) {
             $idade = $this->idade($row["data_nascimento"]);
-            $student = [
-                "id" => $row["id"],
-                "nome" => $row["nome"],
-                "alcunha" => $row["alcunha"] ?? "",
-                "idade" => $idade,
-                "data_nascimento" => $row["data_nascimento"],
-                "row_data" => $row, // Keep original row data
-            ];
+            $student = array_merge($row, ["idade" => $idade]);
             $all_students[] = $student;
         }
 
-        // Apply filters - same logic as horario page
+        // Apply filters with search priority
         $filtered_students = [];
-
         foreach ($all_students as $student) {
             $match = true;
+            $search_priority = 0; // Lower number = higher priority
 
-            // If specific ID is selected, only show that student
-            if (!empty($selected_id) && $selected_id != $student["id"]) {
-                continue;
-            }
-
-            // Name search filter (same as horario page logic)
+            // Name search filter with priority scoring
             if (!empty($search_name)) {
                 $search_lower = strtolower($search_name);
-                $nome_match =
-                    strpos(strtolower($student["nome"]), $search_lower) !==
-                    false;
+                $nome_lower = strtolower($student["nome"]);
+                $alcunha_lower = !empty($student["alcunha"])
+                    ? strtolower($student["alcunha"])
+                    : "";
+
+                $nome_match = strpos($nome_lower, $search_lower) !== false;
                 $alcunha_match =
                     !empty($student["alcunha"]) &&
-                    strpos(strtolower($student["alcunha"]), $search_lower) !==
-                        false;
+                    strpos($alcunha_lower, $search_lower) !== false;
                 $id_match =
                     strpos((string) $student["id"], $search_name) !== false;
 
-                if (!$nome_match && !$alcunha_match && !$id_match) {
+                if ($nome_match || $alcunha_match || $id_match) {
+                    // Determine search priority (lower is better)
+                    if ($id_match) {
+                        $search_priority = 1; // ID match has highest priority
+                    } elseif (strpos($nome_lower, $search_lower) === 0) {
+                        $search_priority = 2; // First name starts with search
+                    } elseif (strpos($alcunha_lower, $search_lower) === 0) {
+                        $search_priority = 3; // Nickname starts with search
+                    } elseif ($nome_match) {
+                        // Check if it's first name vs last name
+                        $name_parts = explode(" ", $nome_lower);
+                        $first_name_match =
+                            !empty($name_parts[0]) &&
+                            strpos($name_parts[0], $search_lower) !== false;
+                        if ($first_name_match) {
+                            $search_priority = 4; // First name contains search
+                        } else {
+                            $search_priority = 6; // Last name contains search
+                        }
+                    } elseif ($alcunha_match) {
+                        $search_priority = 5; // Nickname contains search
+                    }
+                } else {
+                    $match = false;
+                }
+            }
+
+            if ($match) {
+                $student["search_priority"] = $search_priority;
+                $filtered_students[] = $student;
+            }
+
+            // Phone search filter
+            if (!empty($search_phone)) {
+                $phone_match = false;
+                $search_phone_clean = preg_replace("/\D/", "", $search_phone); // Remove non-digits
+
+                // Check student phone
+                if (!empty($student["telemovel"])) {
+                    $student_phone_clean = preg_replace(
+                        "/\D/",
+                        "",
+                        $student["telemovel"],
+                    );
+                    if (
+                        strpos($student_phone_clean, $search_phone_clean) !==
+                        false
+                    ) {
+                        $phone_match = true;
+                    }
+                }
+
+                // Check guardian phone
+                if (!$phone_match && !empty($student["telemovel_ee"])) {
+                    $guardian_phone_clean = preg_replace(
+                        "/\D/",
+                        "",
+                        $student["telemovel_ee"],
+                    );
+                    if (
+                        strpos($guardian_phone_clean, $search_phone_clean) !==
+                        false
+                    ) {
+                        $phone_match = true;
+                    }
+                }
+
+                if (!$phone_match) {
                     $match = false;
                 }
             }
@@ -1138,117 +763,88 @@ class EmotionController
                 $match = false;
             }
 
-            // Birthday filters
-            if (!empty($filter_aniversario)) {
+            // Birthday date filter
+            if (!empty($filter_aniversario_date)) {
                 $birthday_match = false;
                 $data_nascimento = $student["data_nascimento"];
 
-                switch ($filter_aniversario) {
-                    case "hoje":
-                        if (
-                            date("m-d", strtotime($data_nascimento)) ==
-                            date("m-d")
-                        ) {
-                            $birthday_match = true;
-                        }
-                        break;
-                    case "mes":
-                        if (
-                            date("m", strtotime($data_nascimento)) == date("m")
-                        ) {
-                            $birthday_match = true;
-                        }
-                        break;
-                    case "semana":
-                        $birthday_day = date(
-                            "z",
-                            strtotime(
-                                date("Y") .
-                                    "-" .
-                                    date("m-d", strtotime($data_nascimento)),
-                            ),
-                        );
-                        $current_day = date("z");
-                        if (
-                            $birthday_day >= $current_day &&
-                            $birthday_day <= $current_day + 7
-                        ) {
-                            $birthday_match = true;
-                        }
-                        break;
+                // Compare month and day only (ignore year)
+                $selected_date = date(
+                    "m-d",
+                    strtotime($filter_aniversario_date),
+                );
+                $student_birthday = date("m-d", strtotime($data_nascimento));
+
+                if ($selected_date == $student_birthday) {
+                    $birthday_match = true;
                 }
 
                 if (!$birthday_match) {
                     $match = false;
                 }
             }
-
-            if ($match) {
-                $filtered_students[] = $student;
-            }
         }
 
-        // Sort results - prioritize exact matches like horario page
+        // Sort by search priority if there's a search term
         if (!empty($search_name)) {
-            $search_lower = strtolower($search_name);
-            usort($filtered_students, function ($a, $b) use ($search_lower) {
-                $a_name = strtolower($a["nome"]);
-                $b_name = strtolower($b["nome"]);
-
-                // Prioritize matches that start with the search query
-                if (
-                    strpos($a_name, $search_lower) === 0 &&
-                    strpos($b_name, $search_lower) !== 0
-                ) {
-                    return -1;
+            usort($filtered_students, function ($a, $b) {
+                if ($a["search_priority"] !== $b["search_priority"]) {
+                    return $a["search_priority"] - $b["search_priority"]; // Lower priority number comes first
                 }
-                if (
-                    strpos($a_name, $search_lower) !== 0 &&
-                    strpos($b_name, $search_lower) === 0
-                ) {
-                    return 1;
-                }
-
-                return strcmp($a_name, $b_name);
+                return strcasecmp($a["nome"], $b["nome"]); // Alphabetical as secondary sort
             });
         }
 
-        return $filtered_students;
-    }
+        // Calculate totals for all filtered students
+        $total_students = count($filtered_students);
 
-    function getFilteredStudents()
-    {
-        // Use the new reusable search function
-        $filtered_students = $this->searchStudents();
+        // Calculate pagination with 150 student threshold
+        if ($total_students <= 150) {
+            // Normal pagination with 25 per page
+            $total_pages = ceil($total_students / $per_page);
+            $page_students = array_slice(
+                $filtered_students,
+                $offset,
+                $per_page,
+            );
+        } else {
+            // Special handling: 25 per page until 150, then all remaining on last page
+            $pages_of_25 = 6; // 6 pages of 25 = 150 students
+            $students_in_first_pages = $pages_of_25 * $per_page; // 150 students
+            $total_pages = $pages_of_25 + 1; // 6 pages + 1 final page
 
-        // Convert student objects back to row data for HTML generation
-        $filtered_rows = [];
-        foreach ($filtered_students as $student) {
-            $filtered_rows[] = $student["row_data"];
+            if ($page <= $pages_of_25) {
+                // Regular page with 25 students
+                $page_students = array_slice(
+                    $filtered_students,
+                    $offset,
+                    $per_page,
+                );
+            } else {
+                // Final page with all remaining students (151+)
+                $page_students = array_slice(
+                    $filtered_students,
+                    $students_in_first_pages,
+                );
+            }
         }
 
-        // Generate HTML
-        $html = $this->generateFilteredStudentsHTML($filtered_rows);
+        // Calculate totals for current page only
+        $page_total_mensalidades = 0;
 
-        return [
-            "success" => true,
-            "html" => $html,
-            "count" => count($filtered_rows),
-        ];
-    }
+        // Calculate overall totals for ALL students in the system (not filtered)
+        $overall_total_mensalidades = 0;
+        foreach ($all_students as $student) {
+            $overall_total_mensalidades += $this->mensalidade($student["id"]);
+        }
 
-    function generateFilteredStudentsHTML($students)
-    {
-        $tt = $a = 0;
+        // Build table body
         $tbody = "";
-
-        foreach ($students as $row) {
+        foreach ($page_students as $row) {
             extract($row);
 
-            $idade = $this->idade($data_nascimento);
             $mensalidade = $this->mensalidade($id);
-            $tt += $mensalidade;
-
+            $page_total_mensalidades += $mensalidade;
             $aniversario = date("M d", strtotime($data_nascimento));
 
             $ativo = "";
@@ -1266,17 +862,16 @@ class EmotionController
                 $contacto = "{$telemovel_ee} ({$nome_ee[0]})";
             }
 
-            $nome_display = $this->nomeAluno($nome, $alcunha);
+            $nome = $this->nomeAluno($nome, $alcunha);
             $foto = $this->fotoAluno($id);
-
-            $assiduidade_display = $this->assiduidade("", "", $assiduidade);
+            $assiduidade = $this->assiduidade("", "", $assiduidade);
 
             $tbody .= "
-                <tr class='{$ativo}' data-student-id='{$id}' data-student-name='{$nome_display}'>
+                <tr class='{$ativo}' data-student-id='{$id}' data-student-name='{$nome}'>
                     <td>{$id}</td>
                     <td>{$foto}</td>
-                    <td><a href='?p=aluno&id_alunos={$id}'>{$nome_display}</a></td>
-                    <td>{$assiduidade_display[1]}</td>
+                    <td><a href='?p=aluno&id_alunos={$id}'>{$nome}</a></td>
+                    <td>{$assiduidade[1]}</td>
                     <td>{$aniversario}</td>
                     <td>{$idade}</td>
                     <td>{$email}</td>
@@ -1285,54 +880,162 @@ class EmotionController
                     <td><a href='pdf.php?id_alunos={$id}&generate=1' class='btn btn-primary btn-sm' target='_blank' title='Gerar Certificado'><i class='fas fa-certificate'></i></a></td>
                 </tr>
             ";
-
-            $a++;
         }
 
-        return "
-            <div class='table-responsive'>
-                <table class='alunos table table-striped'>
-                    <thead class='bg_azul text-white'>
-                        <th>ID</th>
-                        <th>Foto</th>
-                        <th>Nome</th>
-                        <th>Assiduidade</th>
-                        <th>Aniversário</th>
-                        <th>Idade</th>
-                        <th>Email</th>
-                        <th>Contacto</th>
-                        <th>Mensalidade</th>
-                        <th>Certificado</th>
-                    </thead>
-                    <tbody>
-                        {$tbody}
-                    </tbody>
-                </table>
-            </div>
+        // Build pagination (total_pages already calculated above)
+        $pagination = "";
 
-            <div class='d-flex justify-content-between align-items-end mb-4 mt-4'>
-                <div>
-                    <button class='btn btn-success btn-lg' onclick='downloadAllStudentsCertificates()'
-                            title='Download de todos os certificados dos alunos na página atual'>
-                        <i class='fas fa-download me-2'></i>
-                        Download Todos os Certificados
-                    </button>
-                    <small class='d-block text-muted mt-1'>
-                        <i class='fas fa-info-circle me-1'></i>
-                        Gera e descarrega certificados para todos os alunos visíveis
-                    </small>
-                </div>
-                <div class='text-end'>
-                    <h5>Alunos: {$a}</h5>
-                    <h5>Total Mensalidades: " .
-            number_format($tt, 0) .
-            "€</h5>
-                    <h5>Total S/IVA: " .
-            number_format($tt / 1.23, 0) .
-            "€</h5>
+        if ($total_pages > 1) {
+            $pagination =
+                "<nav aria-label='Paginação de alunos'><ul class='pagination justify-content-center'>";
+
+            // Previous button
+            if ($page > 1) {
+                $prev_page = $page - 1;
+                $pagination .= "<li class='page-item'><a class='page-link bg_azul beje text-decoration-none' href='?p=alunos&page={$prev_page}&search_name={$search_name}&filter_idade_min={$filter_idade_min}&filter_idade_max={$filter_idade_max}&filter_aniversario_date={$filter_aniversario_date}&search_phone={$search_phone}'>Anterior</a></li>";
+            }
+
+            // Page numbers
+            $start_page = max(1, $page - 2);
+            $end_page = min($total_pages, $page + 2);
+
+            for ($i = $start_page; $i <= $end_page; $i++) {
+                if ($i == $page) {
+                    // Active page - beje background with purple text
+                    $pagination .= "<li class='page-item active'><a class='page-link bg_beje azul text-decoration-none' href='?p=alunos&page={$i}&search_name={$search_name}&filter_idade_min={$filter_idade_min}&filter_idade_max={$filter_idade_max}&filter_aniversario_date={$filter_aniversario_date}&search_phone={$search_phone}'>{$i}</a></li>";
+                } else {
+                    // Regular pages - purple background with beje text
+                    $pagination .= "<li class='page-item'><a class='page-link bg_azul beje text-decoration-none' href='?p=alunos&page={$i}&search_name={$search_name}&filter_idade_min={$filter_idade_min}&filter_idade_max={$filter_idade_max}&filter_aniversario_date={$filter_aniversario_date}&search_phone={$search_phone}'>{$i}</a></li>";
+                }
+            }
+
+            // Next button
+            if ($page < $total_pages) {
+                $next_page = $page + 1;
+                $pagination .= "<li class='page-item'><a class='page-link bg_azul beje text-decoration-none' href='?p=alunos&page={$next_page}&search_name={$search_name}&filter_idade_min={$filter_idade_min}&filter_idade_max={$filter_idade_max}&filter_aniversario_date={$filter_aniversario_date}&search_phone={$search_phone}'>Próximo</a></li>";
+            }
+
+            $pagination .= "</ul></nav>";
+        }
+
+        // Build filter interface
+        $filter_interface =
+            "
+        <div class='container-fluid py-4'>
+            <div class='row mb-4'>
+                <div class='col-12'>
+                    <div class='card shadow-sm border-0'>
+                        <div class='card-header bg_azul text-white py-3'>
+                            <h5 class='mb-0 beje'>Filtros de Pesquisa</h5>
+                        </div>
+                        <div class='card-body'>
+                            <form method='get' name='alunos'>
+                                <input type='hidden' name='p' value='alunos'>
+                                <div class='row g-3 align-items-end'>
+                                    <div class='col-md-3'>
+                                        <label for='search_name' class='form-label'>Pesquisar por Nome:</label>
+                                        <input type='text' id='search_name' name='search_name' class='form-control' placeholder='Digite o nome do aluno...' value='{$search_name}'>
+                                    </div>
+                                    <div class='col-md-3'>
+                                        <label for='search_phone' class='form-label'>Pesquisar por Telefone:</label>
+                                        <input type='text' id='search_phone' name='search_phone' class='form-control' placeholder='Digite o número de telefone...' value='{$search_phone}'>
+                                    </div>
+                                    <div class='col-md-1'>
+                                        <label for='filter_idade_min' class='form-label'>Idade Mín:</label>
+                                        <input type='number' id='filter_idade_min' name='filter_idade_min' class='form-control' min='0' max='100' value='{$filter_idade_min}'>
+                                    </div>
+                                    <div class='col-md-1'>
+                                        <label for='filter_idade_max' class='form-label'>Idade Máx:</label>
+                                        <input type='number' id='filter_idade_max' name='filter_idade_max' class='form-control' min='0' max='100' value='{$filter_idade_max}'>
+                                    </div>
+                                    <div class='col-md-2'>
+                                        <label for='filter_aniversario_date' class='form-label'>Data Aniversário:</label>
+                                        <input type='date' id='filter_aniversario_date' name='filter_aniversario_date' class='form-control' value='{$filter_aniversario_date}'>
+                                    </div>
+                                    <div class='col-md-2'>
+                                        <button type='submit' class='btn btn-primary me-2'>Filtrar</button>
+                                        <a href='?p=alunos' class='btn btn-outline-secondary'>
+                                            <i class='fas fa-eraser'></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
+            <div class='row'>
+                <div class='col-12'>
+                    <div class='card shadow-sm border-0'>
+                        <div class='card-header bg_azul text-white d-flex justify-content-between align-items-center'>
+                            <h5 class='mb-0 beje'>Lista de Alunos</h5>
+                            <span class='badge bg-light text-dark'>Página {$page} de {$total_pages} ({$total_students} alunos)</span>
+                        </div>
+                        <div class='card-body p-0'>
+                            <div class='table-responsive'>
+                                <table class='alunos table table-striped'>
+                                    <thead class='bg_azul'>
+                                        <th>ID</th>
+                                        <th>Foto</th>
+                                        <th>Nome</th>
+                                        <th>Assiduidade</th>
+                                        <th>Aniversário</th>
+                                        <th>Idade</th>
+                                        <th>Email</th>
+                                        <th>Contacto</th>
+                                        <th>Mensalidade</th>
+                                        <th>Certificado</th>
+                                    </thead>
+                                    <tbody>
+                                        {$tbody}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {$pagination}
+                            <div class='d-flex justify-content-between align-items-end mb-4 mt-4 px-3'>
+                                <div>
+                                    <!-- <button class='btn btn-success btn-lg me-3' onclick='downloadAllStudentsCertificates()'
+                                            title='Download de todos os certificados dos alunos na página atual'>
+                                        <i class='fas fa-download me-2'></i>
+                                        Download Todos os Certificados
+                                    </button> -->
+                                    <button class='btn btn-primary btn-lg' onclick='exportStudentsList()'
+                                            title='Exportar lista dos alunos visíveis para Excel'>
+                                        <i class='fas fa-file-excel me-2'></i>
+                                        Exportar Lista de Alunos
+                                    </button>
+                                    <small class='d-block text-muted mt-1'>
+                                        <i class='fas fa-info-circle me-1'></i>
+                                        Exporta dados dos alunos visíveis
+                                    </small>
+                                </div>
+                                <div class='text-end'>
+                                    <h5>Alunos: " .
+            count($page_students) .
+            " (Total: {$total_students})</h5>
+                                    <h5>Página - Total Mensalidades: " .
+            number_format($page_total_mensalidades, 0) .
+            "€</h5>
+                                    <h5>Página - Total S/IVA: " .
+            number_format($page_total_mensalidades / 1.23, 0) .
+            "€</h5>
+                                    <hr class='my-2'>
+                                    <h5>Geral - Total Mensalidades: " .
+            number_format($overall_total_mensalidades, 0) .
+            "€</h5>
+                                    <h5>Geral - Total S/IVA: " .
+            number_format($overall_total_mensalidades / 1.23, 0) .
+            "€</h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         ";
+
+        return $filter_interface;
     }
 
     function professoresLista()
@@ -1382,12 +1085,12 @@ class EmotionController
                 <tr class='{$ativo}'>
                     <td>{$id}</td>
                     <td>{$foto}</td>
-                    <td>
-                        <strong><a href='?p=professor&id_professores={$id}'>{$nome}</a></strong>
-                        {$info_adicional}
-                    </td>
+                    <td><a href='?p=professor&id_professores={$id}'>{$nome}</a></td>
                     <td>{$aniversario}</td>
                     <td>{$idade}</td>
+                    <td>
+                        {$info_adicional}
+                    </td>
                 </tr>
             ";
 
@@ -1402,6 +1105,7 @@ class EmotionController
                     <th>Nome</th>
                     <th>Aniversário</th>
                     <th>Idade</th>
+                    <th>Info</th>
                 </thead>
                 <tbody>
                     {$tbody}
@@ -1569,14 +1273,14 @@ class EmotionController
             $total_aulas = $total_presente + $total_ausente;
 
             $presencas .= "
-                <tr>
-                    <td><a href='?p=aula&id={$id_aulas_professores}&id_aulas={$id_aulas}&data={$dt}'>{$data}</a> ({$d})</td>
-                    <td>{$modalidade}</td>
-                    <td>{$professor}</td>
-                    <td>{$horario}</td>
-                    <td>{$presente}</td>
-                </tr>
-            ";
+            <tr>
+                <td><a href='?p=aula&id={$id_aulas_professores}&id_aulas={$id_aulas}&data={$dt}'>{$data}</a> ({$d})</td>
+                <td>{$modalidade}</td>
+                <td>{$professor}</td>
+                <td>{$horario}</td>
+                <td>{$presente}</td>
+            </tr>
+        ";
         }
         #/Presenças
 
@@ -1586,83 +1290,77 @@ class EmotionController
             $ass = $this->assiduidade($m["presente"], $m["ausente"], "");
 
             $ass_modalidades .= "
-                <div class='col-12 p-3 pb-2'>
-                    <div><b>{$k}</b> ({$m["presente"]}/{$m["total"]})</div>
-                    <div>{$ass[1]}</div>
-                </div>
-            ";
+            <div class='col-12 p-3 pb-2'>
+                <div><b>{$k}</b> ({$m["presente"]}/{$m["total"]})</div>
+                <div>{$ass[1]}</div>
+            </div>
+        ";
         }
         #/Assiduidade
 
         return "
-            <div class='row'>
-                <div class='col-1'>
-                    {$aluno["foto"]}
-                    <input type='hidden' id='id_alunos' value='{$id_alunos}' />
-                </div>
-                <div class='col-5'>
-                    <h4>{$aluno["nome"]}</h4>
-                    <h5>{$contacto}</h5>
-                    <h6>{$localidade}</h6>
-                </div>
-                <div class='col-6 text-end'>
-                    <p class='fw-bold text-success mb-1'>Presente: {$total_presente}</p>
-                    <p class='fw-bold text-danger'>Ausente: {$total_ausente}</p>
-                    <p class='fw-bold mb-1'>Assiduidade ({$total_aulas}):</p>
-                    <div class='d-inline-flex'>
-                        {$assiduidade[1]}
-                    </div>
-                </div>
+        <div class='row'>
+            <div class='col-1'>
+                {$aluno["foto"]}
+                <input type='hidden' id='id_alunos' value='{$id_alunos}' />
             </div>
+            <div class='col-5'>
+                <h1>{$aluno["nome"]}</h1>
+                <p>{$contacto}</p>
+                <p>{$email}</p>
+            </div>
+            <div class='col-6'>
+                <h4>Assiduidade Geral: <span class='assiduidade'>{$assiduidade[0]}%</span> ({$total_presente}/{$total_aulas})</h4>
+                <p>{$assiduidade[1]}</p>
+            </div>
+        </div>
 
-            <ul class='nav nav-tabs mt-3' id='myTab' role='tablist'>
-                <li class='nav-item' role='presentation'>
-                    <button class='nav-link active' id='horario-tab' data-bs-toggle='tab' data-bs-target='#horario' type='button' role='tab' aria-controls='horario' aria-selected='true'>Horário</button>
-                </li>
-                <li class='nav-item' role='presentation'>
-                    <button class='nav-link' id='presencas-tab' data-bs-toggle='tab' data-bs-target='#presencas' type='button' role='tab' aria-controls='presencas' aria-selected='false'>Presenças</button>
-                </li>
-                <li class='nav-item' role='presentation'>
-                    <button class='nav-link' id='assiduidade-tab' data-bs-toggle='tab' data-bs-target='#assiduidade' type='button' role='tab' aria-controls='assiduidade' aria-selected='false'>Assiduidade</button>
-                </li>
-            </ul>
-            <div class='tab-content'>
+        <hr>
 
-                <div class='tab-pane show active' id='horario' role='tabpanel' aria-labelledby='horario-tab'>
-                    " .
+        <ul class='nav nav-tabs' id='myTab' role='tablist'>
+            <li class='nav-item' role='presentation'>
+                <button class='nav-link active' id='horario-tab' data-bs-toggle='tab' data-bs-target='#horario' type='button' role='tab' aria-controls='horario' aria-selected='true'>Horário</button>
+            </li>
+            <li class='nav-item' role='presentation'>
+                <button class='nav-link' id='presencas-tab' data-bs-toggle='tab' data-bs-target='#presencas' type='button' role='tab' aria-controls='presencas' aria-selected='false'>Presenças</button>
+            </li>
+            <li class='nav-item' role='presentation'>
+                <button class='nav-link' id='assiduidade-tab' data-bs-toggle='tab' data-bs-target='#assiduidade' type='button' role='tab' aria-controls='assiduidade' aria-selected='false'>Assiduidade</button>
+            </li>
+        </ul>
+        <div class='tab-content' id='myTabContent'>
+
+            <div class='tab-pane show active' id='horario' role='tabpanel' aria-labelledby='horario-tab'>
+                " .
             $this->horario() .
             "
-                </div>
+            </div>
 
-                <div class='tab-pane' id='presencas' role='tabpanel' aria-labelledby='presencas-tab'>
-                    <div class='col-12 text-left p-3 bg_vermelho'>
-                        <h5 class='d-inline-flex beje m-0'>Presenças</h5>
-                    </div>
-                    <table id='presencas' class='table form-table table-striped'>
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Modalidade</th>
-                                <th>Professor</th>
-                                <th>Horário</th>
-                                <th>Presença</th>
-                            </tr>
+            <div class='tab-pane' id='presencas' role='tabpanel' aria-labelledby='presencas-tab'>
+                <div class='table-responsive mt-4'>
+                    <table class='table table-hover table-striped bg_beje'>
+                        <thead class='bg_azul text-white'>
+                            <th>Data</th>
+                            <th>Modalidade</th>
+                            <th>Professor</th>
+                            <th>Horário</th>
+                            <th>Estado</th>
                         </thead>
                         <tbody>
                             {$presencas}
                         </tbody>
                     </table>
                 </div>
+            </div>
 
-                <div class='tab-pane' id='assiduidade' role='tabpanel' aria-labelledby='assiduidade-tab'>
-                <div class='col-12 text-left p-3 bg_vermelho'>
-                    <h5 class='d-inline-flex beje m-0'>Assiduidade</h5>
-                </div>
+            <div class='tab-pane' id='assiduidade' role='tabpanel' aria-labelledby='assiduidade-tab'>
+                <div class='row'>
                     {$ass_modalidades}
                 </div>
-
             </div>
-        ";
+
+        </div>
+    ";
     }
 
     function perfilProfessor($id_professores)
@@ -3926,6 +3624,66 @@ class EmotionController
             throw new Exception("Erro ao gerar conteúdo do PDF");
         }
     }
+
+    function exportStudentsList()
+    {
+        try {
+            // Get data from POST (now JSON-encoded)
+            $headers = isset($_POST["headers"])
+                ? json_decode($_POST["headers"], true)
+                : [];
+            $students_data = isset($_POST["students_data"])
+                ? json_decode($_POST["students_data"], true)
+                : [];
+
+            if (empty($students_data)) {
+                header("Content-Type: application/json");
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Nenhum dado de aluno encontrado",
+                ]);
+                return;
+            }
+
+            // Generate filename with timestamp
+            $timestamp = date("Y-m-d_H-i-s");
+            $filename = "lista_alunos_{$timestamp}.csv";
+
+            // Set headers for direct download
+            header("Content-Type: text/csv; charset=utf-8");
+            header("Content-Disposition: attachment; filename=\"{$filename}\"");
+            header("Cache-Control: no-cache, must-revalidate");
+            header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
+
+            // Output UTF-8 BOM for proper Excel encoding
+            echo "\xEF\xBB\xBF";
+
+            // Output headers
+            if (!empty($headers)) {
+                echo implode(";", $headers) . "\r\n";
+            }
+
+            // Output student data
+            foreach ($students_data as $row) {
+                // Clean and escape data for CSV
+                $clean_row = array_map(function ($cell) {
+                    // Remove any HTML tags and clean the data
+                    $cell = strip_tags($cell);
+                    $cell = str_replace('"', '""', $cell); // Escape quotes
+                    return '"' . $cell . '"'; // Wrap in quotes
+                }, $row);
+                echo implode(";", $clean_row) . "\r\n";
+            }
+
+            exit(); // Stop execution after sending file
+        } catch (Exception $e) {
+            header("Content-Type: application/json");
+            echo json_encode([
+                "success" => false,
+                "message" => "Erro interno: " . $e->getMessage(),
+            ]);
+        }
+    }
 }
 
 #AJAX
@@ -4219,6 +3977,12 @@ if (isset($_POST["function"])) {
 
         case "presencaEvento":
             header("Content-Type: application/json");
+
+            // Debug logging
+            error_log("=== PRESENCA EVENTO DEBUG ===");
+            error_log("POST data: " . print_r($_POST, true));
+            error_log("Timestamp: " . date("Y-m-d H:i:s"));
+
             try {
                 $id_aluno = $_POST["id_aluno"];
                 $id_evento = $_POST["id_evento"];
@@ -4226,12 +3990,22 @@ if (isset($_POST["function"])) {
                 $presente = intval($_POST["presente"]);
                 $action = $_POST["action"];
 
+                error_log(
+                    "Parsed values - id_aluno: $id_aluno, id_evento: $id_evento, id_presenca: $id_presenca, presente: $presente, action: $action",
+                );
+
                 if ($presente == 1) {
+                    error_log("Marking as present");
                     // Marcar como presente - sempre usar createPresencaEvento
                     $success = $emotionModel->createPresencaEvento(
                         $id_aluno,
                         $id_evento,
                         $presente,
+                    );
+
+                    error_log(
+                        "createPresencaEvento result: " .
+                            ($success ? "true" : "false"),
                     );
 
                     if ($success) {
@@ -4242,27 +4016,39 @@ if (isset($_POST["function"])) {
                         );
                         if ($result && $result->num_rows > 0) {
                             $row = $result->fetch_array();
+                            error_log(
+                                "Found presence record with ID: " . $row["id"],
+                            );
                             echo json_encode([
                                 "success" => true,
                                 "id_presenca" => $row["id"],
                             ]);
                         } else {
+                            error_log(
+                                "Could not find presence record after creation",
+                            );
                             echo json_encode([
                                 "success" => false,
                                 "message" => "Erro ao obter ID da presença",
                             ]);
                         }
                     } else {
+                        error_log("Failed to create presence record");
                         echo json_encode([
                             "success" => false,
                             "message" => "Erro ao marcar como presente",
                         ]);
                     }
                 } else {
+                    error_log("Marking as absent");
                     // Marcar como ausente - remover o registro
                     $success = $emotionModel->removePresencaEvento(
                         $id_aluno,
                         $id_evento,
+                    );
+                    error_log(
+                        "removePresencaEvento result: " .
+                            ($success ? "true" : "false"),
                     );
                     echo json_encode([
                         "success" => $success,
@@ -4273,6 +4059,8 @@ if (isset($_POST["function"])) {
                     ]);
                 }
             } catch (Exception $e) {
+                error_log("Exception in presencaEvento: " . $e->getMessage());
+                error_log("Stack trace: " . $e->getTraceAsString());
                 echo json_encode([
                     "success" => false,
                     "message" => $e->getMessage(),
@@ -4363,6 +4151,10 @@ if (isset($_POST["function"])) {
 
         case "downloadMultipleCertificates":
             $emotionController->downloadMultipleCertificates();
+            break;
+
+        case "exportStudentsList":
+            $emotionController->exportStudentsList();
             break;
     }
 }

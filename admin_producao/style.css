@@ -35,6 +35,32 @@ thead.bg_azul th {
 .azul {
     color: #2c254b;
 }
+
+/* Custom Pagination Styling */
+.pagination .page-link.bg_azul {
+    background-color: #2c254b !important;
+    border-color: #2c254b !important;
+    color: #feefdc !important;
+}
+
+.pagination .page-link.bg_azul:hover {
+    background-color: #3a3159 !important;
+    border-color: #3a3159 !important;
+    color: #feefdc !important;
+}
+
+.pagination .page-item.active .page-link.bg_beje {
+    background-color: #feefdc !important;
+    border-color: #feefdc !important;
+    color: #2c254b !important;
+}
+
+.pagination .page-item.active .page-link.bg_beje:hover {
+    background-color: #fde8cb !important;
+    border-color: #fde8cb !important;
+    color: #2c254b !important;
+}
+
 /* Fundos e Cores */
 
 .container {

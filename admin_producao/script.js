@@ -585,140 +585,18 @@ $(function () {
   }
 
   // Presenças de Eventos
-  $(document).on("change", ".presenca-evento", function () {
-    var radio = $(this);
-    var id_aluno = radio.data("id-aluno");
-    var id_evento = radio.data("id-evento");
-    var id_presenca = radio.data("id-presenca");
-    var presente = parseInt(radio.val());
-    var now = new Date().toISOString().slice(0, 19).replace("T", " ");
+  $(document)
+    .off("change", ".presenca-evento")
+    .on("change", ".presenca-evento", function () {
+      var radio = $(this);
+      var id_aluno = radio.data("id-aluno");
+      var id_evento = radio.data("id-evento");
+      var id_presenca = radio.data("id-presenca");
+      var presente = parseInt(radio.val());
 
-    // Debug logging
-    console.log("=== EVENTO PRESENCE BUTTON CLICKED ===");
-    console.log("Element:", radio[0]);
-    console.log("Data attributes:", {
-      id_aluno: id_aluno,
-      id_evento: id_evento,
-      id_presenca: id_presenca,
-      presente: presente,
+      // Call the extracted function
+      handlePresenceChange(radio, id_aluno, id_evento, id_presenca, presente);
     });
-    console.log("Radio value:", radio.val());
-    console.log("Radio name:", radio.attr("name"));
-
-    // Encontrar todos os radio buttons do mesmo grupo
-    var radioGroup = $("input[name='" + radio.attr("name") + "']");
-
-    // Add loading state
-    var parentRow = radio.closest("tr");
-    var originalContent = parentRow.find("td:last").html();
-    parentRow
-      .find("td:last")
-      .html(
-        '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando...</span></div>',
-      );
-
-    // Disable all radio buttons in the group during request
-    radioGroup.prop("disabled", true);
-
-    // Atualizar todos os radio buttons do grupo com os mesmos dados
-    radioGroup.each(function () {
-      $(this).data("id-presenca", id_presenca);
-    });
-
-    // Enviar para o servidor
-    var ajaxData = {
-      function: "presencaEvento",
-      id_aluno: id_aluno,
-      id_evento: id_evento,
-      id_presenca: id_presenca,
-      presente: presente,
-      data_hora: now,
-      action: id_presenca > 0 ? "update" : "insert",
-    };
-
-    console.log("Sending AJAX request with data:", ajaxData);
-
-    $.ajax({
-      type: "POST",
-      url: "controller.php",
-      dataType: "json",
-      data: ajaxData,
-      success: function (response) {
-        console.log("Server response:", response);
-
-        if (response.success) {
-          // Sempre atualizar o data-id-presenca com o valor retornado
-          radioGroup.each(function () {
-            $(this).data("id-presenca", response.id_presenca);
-          });
-
-          // Update presence statistics in real-time
-          updatePresenceStats();
-
-          // Show success indicator
-          parentRow
-            .find("td:last")
-            .html('<i class="fas fa-check text-success"></i>');
-          setTimeout(function () {
-            parentRow.find("td:last").html(originalContent);
-          }, 2000);
-
-          console.log("Presence updated successfully");
-        } else {
-          console.error("Server returned error:", response.message);
-
-          // Reverter a seleção se houve erro
-          var oppositeValue = presente === 1 ? 0 : 1;
-          radioGroup
-            .filter("[value='" + oppositeValue + "']")
-            .prop("checked", true);
-
-          // Show error indicator
-          parentRow
-            .find("td:last")
-            .html('<i class="fas fa-times text-danger"></i>');
-          setTimeout(function () {
-            parentRow.find("td:last").html(originalContent);
-          }, 3000);
-
-          alert(
-            "Erro ao atualizar presença: " +
-              (response.message || "Erro desconhecido"),
-          );
-        }
-
-        // Re-enable radio buttons
-        radioGroup.prop("disabled", false);
-      },
-      error: function (xhr, status, error) {
-        console.error("AJAX error:", {
-          xhr: xhr,
-          status: status,
-          error: error,
-        });
-        console.log("Response Text:", xhr.responseText);
-
-        // Reverter a seleção se houve erro
-        var oppositeValue = presente === 1 ? 0 : 1;
-        radioGroup
-          .filter("[value='" + oppositeValue + "']")
-          .prop("checked", true);
-
-        // Show error indicator
-        parentRow
-          .find("td:last")
-          .html('<i class="fas fa-exclamation-triangle text-warning"></i>');
-        setTimeout(function () {
-          parentRow.find("td:last").html(originalContent);
-        }, 3000);
-
-        // Re-enable radio buttons
-        radioGroup.prop("disabled", false);
-
-        alert("Erro de conexão ao atualizar presença");
-      },
-    });
-  });
   ///Presenças de Eventos
 
   // Associações de Professores com Eventos
@@ -1071,5 +949,333 @@ function downloadAllStudentsCertificates() {
       button.prop("disabled", false);
       button.html(originalText);
     },
+  });
+}
+
+function exportStudentsList() {
+  // Get all student data from the current page
+  var studentsData = [];
+  var headers = [];
+
+  // Get table headers
+  $(".alunos thead th").each(function () {
+    headers.push($(this).text().trim());
+  });
+
+  // Get student data from each row
+  $(".alunos tbody tr[data-student-id]").each(function () {
+    var rowData = [];
+    $(this)
+      .find("td")
+      .each(function (index) {
+        var cellText = $(this).text().trim();
+        // Clean up the cell data
+        if (index === 1) {
+          // Skip the photo column - just put "Foto"
+          rowData.push("Foto");
+        } else if (index === 2) {
+          // For name column, extract just the text without link
+          var nameLink = $(this).find("a");
+          if (nameLink.length > 0) {
+            rowData.push(nameLink.text().trim());
+          } else {
+            rowData.push(cellText);
+          }
+        } else if (index === 9) {
+          // Skip the certificate button column - just put "Disponível"
+          rowData.push("Disponível");
+        } else {
+          rowData.push(cellText);
+        }
+      });
+    studentsData.push(rowData);
+  });
+
+  if (studentsData.length === 0) {
+    alert("Nenhum aluno encontrado na página atual.");
+    return;
+  }
+
+  // Show loading message
+  showMessage(
+    "⏳ Preparando exportação de " + studentsData.length + " alunos...",
+    "success",
+  );
+
+  // Disable the button
+  var button = $('button[onclick*="exportStudentsList"]');
+  button.prop("disabled", true);
+  var originalText = button.html();
+  button.html(
+    '<i class="fas fa-spinner fa-spin"></i> Exportando ' +
+      studentsData.length +
+      " Alunos...",
+  );
+
+  // Create a form to submit data for direct download
+  var form = $("<form>", {
+    method: "POST",
+    action: "controller.php",
+    target: "_blank",
+  });
+
+  // Add hidden inputs
+  form.append(
+    $("<input>", {
+      type: "hidden",
+      name: "function",
+      value: "exportStudentsList",
+    }),
+  );
+
+  form.append(
+    $("<input>", {
+      type: "hidden",
+      name: "headers",
+      value: JSON.stringify(headers),
+    }),
+  );
+
+  form.append(
+    $("<input>", {
+      type: "hidden",
+      name: "students_data",
+      value: JSON.stringify(studentsData),
+    }),
+  );
+
+  // Append form to body and submit
+  $("body").append(form);
+  form.submit();
+  form.remove();
+
+  // Show success message and re-enable button
+  setTimeout(function () {
+    showMessage(
+      "✅ Lista exportada com sucesso! (" + studentsData.length + " alunos)",
+      "success",
+    );
+    button.prop("disabled", false);
+    button.html(originalText);
+  }, 1000);
+}
+
+// Diagnostic code for presence system
+$(document).ready(function () {
+  console.log("=== PRESENCE SYSTEM DIAGNOSTICS ===");
+  console.log("Document ready triggered");
+  console.log("jQuery version:", $.fn.jquery);
+
+  // Check if presence radio buttons exist
+  var presenceButtons = $(".presenca-evento");
+  console.log("Found presence buttons:", presenceButtons.length);
+
+  if (presenceButtons.length > 0) {
+    console.log("Sample presence button:", presenceButtons.first()[0]);
+    console.log("Sample data attributes:", {
+      "id-aluno": presenceButtons.first().data("id-aluno"),
+      "id-evento": presenceButtons.first().data("id-evento"),
+      "id-presenca": presenceButtons.first().data("id-presenca"),
+    });
+  }
+
+  // Force rebind presence events
+  $(document).off("change", ".presenca-evento");
+
+  // Test manual event binding as fallback
+  $(".presenca-evento")
+    .off("change")
+    .on("change", function () {
+      console.log("=== DIRECT EVENT HANDLER TRIGGERED ===");
+      var radio = $(this);
+      var id_aluno = radio.data("id-aluno");
+      var id_evento = radio.data("id-evento");
+      var id_presenca = radio.data("id-presenca");
+      var presente = parseInt(radio.val());
+
+      console.log("Direct handler data:", {
+        id_aluno: id_aluno,
+        id_evento: id_evento,
+        id_presenca: id_presenca,
+        presente: presente,
+      });
+
+      // Call the same AJAX function
+      handlePresenceChange(radio, id_aluno, id_evento, id_presenca, presente);
+    });
+
+  // Test event binding
+  setTimeout(function () {
+    console.log("Testing event binding...");
+    var testButton = $(".presenca-evento").first();
+    if (testButton.length > 0) {
+      console.log("Test button found:", testButton[0]);
+      console.log("Event handlers attached:", $._data(testButton[0], "events"));
+    }
+  }, 1000);
+});
+
+// Extract AJAX logic into separate function
+function handlePresenceChange(
+  radio,
+  id_aluno,
+  id_evento,
+  id_presenca,
+  presente,
+) {
+  var now = new Date().toISOString().slice(0, 19).replace("T", " ");
+
+  // Debug logging
+  console.log("=== EVENTO PRESENCE BUTTON CLICKED ===");
+  console.log("Event triggered at:", new Date().toISOString());
+  console.log("Element:", radio[0]);
+  console.log("jQuery element:", radio);
+  console.log("Data attributes:", {
+    id_aluno: id_aluno,
+    id_evento: id_evento,
+    id_presenca: id_presenca,
+    presente: presente,
+  });
+  console.log("Radio value:", radio.val());
+  console.log("Radio name:", radio.attr("name"));
+
+  // Encontrar todos os radio buttons do mesmo grupo
+  var radioGroup = $("input[name='" + radio.attr("name") + "']");
+
+  // Add loading state
+  var parentRow = radio.closest("tr");
+  var originalContent = parentRow.find("td:last").html();
+
+  // Disable all radio buttons in the group during request
+  radioGroup.prop("disabled", true);
+
+  // Atualizar todos os radio buttons do grupo com os mesmos dados
+  radioGroup.each(function () {
+    $(this).data("id-presenca", id_presenca);
+  });
+
+  // Enviar para o servidor
+  var ajaxData = {
+    function: "presencaEvento",
+    id_aluno: id_aluno,
+    id_evento: id_evento,
+    id_presenca: id_presenca,
+    presente: presente,
+    data_hora: now,
+    action: id_presenca > 0 ? "update" : "insert",
+  };
+
+  console.log("Sending AJAX request with data:", ajaxData);
+  console.log("Controller URL:", "controller.php");
+  console.log("Request time:", new Date().toISOString());
+
+  $.ajax({
+    type: "POST",
+    url: "controller.php",
+    dataType: "json",
+    data: ajaxData,
+    success: function (response) {
+      console.log("=== AJAX SUCCESS ===");
+      console.log("Response time:", new Date().toISOString());
+      console.log("Server response:", response);
+      console.log("Response type:", typeof response);
+
+      if (response.success) {
+        // Sempre atualizar o data-id-presenca com o valor retornado
+        radioGroup.each(function () {
+          $(this).data("id-presenca", response.id_presenca);
+        });
+
+        // Update presence statistics in real-time
+        updatePresenceStats();
+
+        console.log("Presence updated successfully");
+      } else {
+        console.error("Server returned error:", response.message);
+
+        // Reverter a seleção se houve erro
+        var oppositeValue = presente === 1 ? 0 : 1;
+        radioGroup
+          .filter("[value='" + oppositeValue + "']")
+          .prop("checked", true);
+
+        // Restore original content immediately on error
+        parentRow.find("td:last").html(originalContent);
+
+        alert(
+          "Erro ao atualizar presença: " +
+            (response.message || "Erro desconhecido"),
+        );
+      }
+
+      // Re-enable radio buttons
+      radioGroup.prop("disabled", false);
+    },
+    error: function (xhr, status, error) {
+      console.error("=== AJAX ERROR ===");
+      console.error("Error time:", new Date().toISOString());
+      console.error("AJAX error:", {
+        xhr: xhr,
+        status: status,
+        error: error,
+      });
+      console.error("Response Text:", xhr.responseText);
+      console.error("Response Status:", xhr.status);
+      console.error("Ready State:", xhr.readyState);
+
+      // Reverter a seleção se houve erro
+      var oppositeValue = presente === 1 ? 0 : 1;
+      radioGroup
+        .filter("[value='" + oppositeValue + "']")
+        .prop("checked", true);
+
+      // Restore original content immediately on connection error
+      parentRow.find("td:last").html(originalContent);
+
+      // Re-enable radio buttons
+      radioGroup.prop("disabled", false);
+
+      alert("Erro de conexão ao atualizar presença");
+    },
+  });
+}
+
+// Function to update presence statistics in real-time
+function updatePresenceStats() {
+  // Count present and absent students
+  var totalStudents = 0;
+  var presentStudents = 0;
+
+  // Count checked "presente" radio buttons
+  $('.presenca-evento[value="1"]:checked').each(function () {
+    presentStudents++;
+    totalStudents++;
+  });
+
+  // Count checked "ausente" radio buttons
+  $('.presenca-evento[value="0"]:checked').each(function () {
+    totalStudents++;
+  });
+
+  var absentStudents = totalStudents - presentStudents;
+  var percentage =
+    totalStudents > 0 ? Math.round((presentStudents / totalStudents) * 100) : 0;
+
+  // Update the statistics display
+  $("#presentes-count").text("Presentes: " + presentStudents);
+  $("#ausentes-count").text("Ausentes: " + absentStudents);
+  $("#taxa-presenca").text("Taxa de Presença: " + percentage + "%");
+
+  // Update progress bar
+  $(".progress-bar")
+    .css("width", percentage + "%")
+    .attr("aria-valuenow", percentage)
+    .text(percentage + "%");
+
+  console.log("Updated presence stats:", {
+    total: totalStudents,
+    present: presentStudents,
+    absent: absentStudents,
+    percentage: percentage,
   });
 }
