@@ -737,6 +737,18 @@ class EmotionModel
         return $result;
     }
 
+    function alunosEventoRegistrados($id_eventos)
+    {
+        $result = $this->mysqli->query("
+            SELECT a.*, ae.id as id_aluno_evento, ae.presente
+            FROM alunos a
+            INNER JOIN alunos_eventos ae ON ae.id_alunos = a.id AND ae.id_eventos = '{$id_eventos}'
+            WHERE a.ativo = 1
+            ORDER BY a.nome ASC
+        ");
+        return $result;
+    }
+
     function presencaEventoAluno($id_eventos, $id_alunos)
     {
         $result = $this->mysqli->query("
@@ -748,33 +760,185 @@ class EmotionModel
 
     function createPresencaEvento($id_alunos, $id_eventos, $presente)
     {
-        if ($presente == 1) {
-            // First, check if the event has destaque = 1
-            $destaque = 0;
-            $result = $this->mysqli->query("
-                SELECT `destaque` FROM `eventos`
-                WHERE `id` = '{$id_eventos}' AND `ativo` = 1
-            ");
-            if ($result && ($row = $result->fetch_array())) {
-                $destaque = $row["destaque"];
-            }
+        // Check if the required columns exist in the table
+        $columns_exist = $this->checkAlunosEventosColumns();
 
+        if (!$columns_exist["presente"] || !$columns_exist["destaque"]) {
+            // Add missing columns if they don't exist
+            $this->addMissingAlunosEventosColumns($columns_exist);
+
+            // Refresh column check
+            $columns_exist = $this->checkAlunosEventosColumns();
+        }
+
+        // First, check if the event has destaque = 1
+        $destaque = 0;
+        $result = $this->mysqli->query("
+            SELECT `destaque` FROM `eventos`
+            WHERE `id` = '{$id_eventos}' AND `ativo` = 1
+        ");
+        if ($result && ($row = $result->fetch_array())) {
+            $destaque = $row["destaque"];
+        }
+
+        if ($columns_exist["presente"] && $columns_exist["destaque"]) {
+            // Use INSERT ... ON DUPLICATE KEY UPDATE if columns exist
             $this->mysqli->query("
                 INSERT INTO `alunos_eventos` (`id_alunos`, `id_eventos`, `presente`, `destaque`)
-                VALUES ('{$id_alunos}', '{$id_eventos}', '1', '{$destaque}')
+                VALUES ('{$id_alunos}', '{$id_eventos}', '{$presente}', '{$destaque}')
                 ON DUPLICATE KEY UPDATE
-                `presente` = '1',
-                `destaque` = '{$destaque}'
+                `presente` = VALUES(`presente`),
+                `destaque` = VALUES(`destaque`)
             ");
-            return $this->mysqli->affected_rows > 0;
         } else {
-            // For absent, remove the record entirely
-            return $this->removePresencaEvento($id_alunos, $id_eventos);
+            // Fallback to basic insert without new columns
+            error_log(
+                "Warning: Using fallback insert for alunos_eventos - columns missing",
+            );
+
+            // Check if record exists
+            $check_result = $this->mysqli->query("
+                SELECT id FROM `alunos_eventos`
+                WHERE `id_alunos` = '{$id_alunos}' AND `id_eventos` = '{$id_eventos}'
+            ");
+
+            if ($check_result->num_rows == 0) {
+                // Insert new record
+                $this->mysqli->query("
+                    INSERT INTO `alunos_eventos` (`id_alunos`, `id_eventos`)
+                    VALUES ('{$id_alunos}', '{$id_eventos}')
+                ");
+            }
+            // If record exists, we consider it "present" by default
+        }
+
+        // Check for MySQL errors
+        if ($this->mysqli->error) {
+            error_log(
+                "MySQL Error in createPresencaEvento: " . $this->mysqli->error,
+            );
+            return false;
+        }
+
+        // Check if operation was successful
+        // For ON DUPLICATE KEY UPDATE, affected_rows can be 0 if no change was needed
+        // This is actually a success case, not a failure
+        if ($this->mysqli->error) {
+            return false;
+        }
+
+        // If we get here, the query executed without errors
+        // affected_rows = 0 means record exists with same values (success)
+        // affected_rows = 1 means new record inserted (success)
+        // affected_rows = 2 means existing record updated (success)
+        return true;
+    }
+
+    private function checkAlunosEventosColumns()
+    {
+        $columns = ["presente" => false, "destaque" => false];
+
+        $result = $this->mysqli->query("DESCRIBE alunos_eventos");
+        if ($result) {
+            while ($row = $result->fetch_array()) {
+                $field_name = $row["Field"];
+                if (isset($columns[$field_name])) {
+                    $columns[$field_name] = true;
+                }
+            }
+        }
+
+        return $columns;
+    }
+
+    private function addMissingAlunosEventosColumns($columns_exist)
+    {
+        try {
+            // Add presente column if missing
+            if (!$columns_exist["presente"]) {
+                $this->mysqli->query("
+                    ALTER TABLE alunos_eventos
+                    ADD COLUMN presente TINYINT(1) NOT NULL DEFAULT 1
+                ");
+                if ($this->mysqli->error) {
+                    error_log(
+                        "Error adding 'presente' column: " .
+                            $this->mysqli->error,
+                    );
+                } else {
+                    error_log(
+                        "Successfully added 'presente' column to alunos_eventos",
+                    );
+                }
+            }
+
+            // Add destaque column if missing
+            if (!$columns_exist["destaque"]) {
+                $this->mysqli->query("
+                    ALTER TABLE alunos_eventos
+                    ADD COLUMN destaque TINYINT(1) NOT NULL DEFAULT 0
+                ");
+                if ($this->mysqli->error) {
+                    error_log(
+                        "Error adding 'destaque' column: " .
+                            $this->mysqli->error,
+                    );
+                } else {
+                    error_log(
+                        "Successfully added 'destaque' column to alunos_eventos",
+                    );
+                }
+            }
+
+            // Add unique constraint if both columns exist
+            if (!$columns_exist["presente"] || !$columns_exist["destaque"]) {
+                // Check if unique constraint already exists
+                $constraint_result = $this->mysqli->query("
+                    SHOW INDEX FROM alunos_eventos WHERE Key_name = 'unique_student_event'
+                ");
+
+                if ($constraint_result && $constraint_result->num_rows == 0) {
+                    // Remove duplicates first
+                    $this->mysqli->query("
+                        DELETE ae1 FROM alunos_eventos ae1
+                        INNER JOIN alunos_eventos ae2
+                        WHERE ae1.id > ae2.id
+                        AND ae1.id_alunos = ae2.id_alunos
+                        AND ae1.id_eventos = ae2.id_eventos
+                    ");
+
+                    // Add unique constraint
+                    $this->mysqli->query("
+                        ALTER TABLE alunos_eventos
+                        ADD CONSTRAINT unique_student_event
+                        UNIQUE KEY (id_alunos, id_eventos)
+                    ");
+
+                    if ($this->mysqli->error) {
+                        error_log(
+                            "Error adding unique constraint: " .
+                                $this->mysqli->error,
+                        );
+                    } else {
+                        error_log(
+                            "Successfully added unique constraint to alunos_eventos",
+                        );
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log(
+                "Exception in addMissingAlunosEventosColumns: " .
+                    $e->getMessage(),
+            );
         }
     }
 
     function removePresencaEvento($id_alunos, $id_eventos)
     {
+        // DEPRECATED: This function is no longer used in the new presence logic
+        // We now maintain records for both present and absent states
+        // Use createPresencaEvento($id_alunos, $id_eventos, 0) instead
         // First check if record exists
         $check_result = $this->mysqli->query("
             SELECT id FROM `alunos_eventos`
